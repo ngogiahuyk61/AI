@@ -1,0 +1,24 @@
+{
+  "total_shared_edges": 0,
+  "shared_edges": [],
+  "merge_info": [
+    {
+      "master": "balcony_1",
+      "slave": "common_room_1",
+      "type": "vertical",
+      "distance": 2
+    },
+    {
+      "master": "balcony_1",
+      "slave": "bathroom_1",
+      "type": "horizontal",
+      "distance": 2
+    },
+    {
+      "master": "common_room_2",
+      "slave": "bathroom_2",
+      "type": "horizontal",
+      "distance": 19
+    }
+  ]
+}
