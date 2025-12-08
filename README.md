@@ -8,3 +8,6 @@ Include:
 Include:
     - Model diffusion.
     - OpenCV process images.
+
+## Info 
+_  All progress and information at docs.google
