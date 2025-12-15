@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Add CRM Code to form view -->
+    <record id="crm_lead_view_form_inherit" model="ir.ui.view">
+        <field name="name">crm.lead.form.inherit</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="crm_code" placeholder="Auto-generated if empty"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Add CRM Code to list view -->
+     <record id="crm_lead_view_form_inherit" model="ir.ui.view">
+        <field name="name">crm.lead.form.inherit</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='partner_name']" position="after">
+                <field name="crm_code" placeholder="Auto-generated if empty"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Search view inheritance -->
+    <record id="crm_lead_view_search_inherit" model="ir.ui.view">
+        <field name="name">crm.lead.search.inherit</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.view_crm_case_leads_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="crm_code"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_crm_lead_kanban_custom" model="ir.ui.view">
+        <field name="name">CRM Lead Kanban Custom</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_kanban_view_leads"/>
+        <field name="arch" type="xml">
+            <!-- Add crm_code to the kanban fields -->
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="crm_code" style="color:red;"/>
+            </xpath>
+            
+            <!-- Display crm_code in the kanban card -->
+            <!-- <xpath expr="//div[hasclass('oe_kanban_details')]//div[1]" position="after">
+                <div t-if="record.crm_code.value" class="text-muted">
+                    <i class="fa fa-code" title="CRM Code"/> 
+                    <t t-esc="record.crm_code.value"/>
+                </div>
+            </xpath> -->
+            
+        </field>
+    </record>
+     <!-- <record id="crm_lead_quick_create_fixed" model="ir.ui.view">
+        <field name="name">CRM Lead Quick Create Fixed</field>
+        <field name="model">crm.lead</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="partner_id" placeholder="Contact"/>
+                    <field name="name" placeholder="Opportunity" required="1"/>
+                    <field name="crm_code" placeholder="Code"/>
+                    <field name="email_from" placeholder="Email" widget="email"/>
+                    <field name="phone" placeholder="Phone" widget="phone"/>
+                    <field name="expected_revenue" placeholder="Expected Revenue"/>
+                    <field name="priority" placeholder="Priority" class="o_priority" role="radiogroup" />
+                </group>
+            </form>
+        </field>
+    </record>
+
+    <record id="crm_case_kanban_view_leads_fixed" model="ir.ui.view">
+        <field name="name">CRM Leads Kanban Fixed</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_kanban_view_leads"/>
+        <field name="arch" type="xml">
+            <xpath expr="//kanban" position="attributes">
+                <attribute name="quick_create">true</attribute>
+                <attribute name="quick_create_view">custom_crm.crm_lead_quick_create_fixed</attribute>
+            </xpath>
+        </field>
+    </record> -->
+
+    <!-- Add your field to existing quick create -->
+    <record id="quick_create_opportunity_form_custom" model="ir.ui.view">
+        <field name="name">Quick Create Opportunity Custom</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.quick_create_opportunity_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="crm_code" placeholder="Code"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Enable quick create (no custom view needed) -->
+    <record id="crm_case_kanban_view_leads_simple" model="ir.ui.view">
+        <field name="name">CRM Leads Kanban Simple</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_kanban_view_leads"/>
+        <field name="arch" type="xml">
+            <xpath expr="//kanban" position="attributes">
+                <attribute name="quick_create">true</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>

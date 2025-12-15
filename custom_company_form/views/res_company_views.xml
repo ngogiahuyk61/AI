@@ -1,0 +1,35 @@
+<odoo>
+    <record id="view_res_company_form_inherit" model="ir.ui.view">
+        <field name="name">res.company.form.inherit</field>
+        <field name="model">res.company</field>
+        <field name="inherit_id" ref="base.view_company_form"/>
+        <field name="arch" type="xml">
+            <field name="zip" position="attributes">
+                <attribute name="placeholder">郵便番号を入力すると、自動に住所が入力られます。例: 1008996</attribute>
+            </field>
+            <field name="phone" position="attributes">
+                <attribute name="placeholder">例: 03-1234-5678</attribute>
+            </field>
+            <field name="mobile" position="attributes">
+                <attribute name="placeholder">例: 03-1234-5678</attribute>
+            </field>
+            <field name="email" position="attributes">
+                <attribute name="placeholder">例: skyace@skyace.co.jp</attribute>
+            </field>
+            <field name="parent_id" position="attributes">
+                <attribute name="placeholder">親会社をお選びください</attribute>
+            </field>
+            <!-- <field name="branches" position="attributes">
+                <attribute name="text">親会社をお選びください</attribute>
+            </field> -->
+
+            <!-- <xpath expr="//page[@string='支店']" position="attributes">
+                <attribute name="string">支店管理</attribute>
+            </xpath> -->
+
+            <!-- <xpath expr="//page[@name='branches']" position="attributes">
+                <attribute name="string">支店管理</attribute>
+            </xpath> -->
+        </field>
+    </record>
+</odoo>

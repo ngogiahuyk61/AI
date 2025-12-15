@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="homepage_template" name="Custom Home Page">
+        <t t-call="web.frontend_layout">
+            <t t-set="head">
+                <link rel="stylesheet" type="text/scss" href="/custom_homepage/static/src/scss/homepage.scss"/>
+            </t>
+            
+            <div class="custom-home-container">
+                <!-- <div class="welcome-header">
+                    <h1 class="welcome-title">ハンカンへようこそ！</h1>
+                    <p class="welcome-subtitle">こんにちは、<span t-esc="user.name"/>。始めるにはモジュールをお選びください</p>
+                </div> -->
+                
+                <div class="row">
+                    <div class="col-lg-8">
+                        <!-- Sales Management Section -->
+                        <div class="module-section">
+                            <div class="section-header">
+                            <div class="section-icon">
+                                    <i class="fa fa-bar-chart"></i>
+                                </div>
+                                <div class="d-flex flex-cl">
+                                販売管理
+                                <small class="text-muted ml-2 small-text">顧客関係と売上を管理します</small>
+                                </div>
+                            
+                            </div>
+                            <div class="modules-grid">
+                                <a t-attf-href="/odoo/products?view_type=list" class="module-card" tabindex="0" onclick="window.location=this.href">
+                                    <div class="module-header">
+                                        <div class="module-icon module-project">
+                                            <i class="fa fa-folder"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="module-title">プロダクト</h3>
+                                        </div>
+                                    </div>
+                                    <p class="module-subtitle">商品の詳細と在庫を管理します</p>
+                                </a>
+                                
+                                <a t-attf-href="/odoo/sales" class="module-card" tabindex="0" onclick="window.location=this.href">
+                                    <div class="module-header">
+                                        <div class="module-icon module-sales">
+                                            <i class="fa fa-eye"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="module-title">見積</h3>
+                                        </div>
+                                    </div>
+                                    <p class="module-subtitle">顧客への見積もりを作成・管理します</p>
+                                </a>
+                                
+                                <a t-attf-href="/odoo/orders"   class="module-card" tabindex="0" onclick="window.location=this.href">
+                                    <div class="module-header">
+                                        <div class="module-icon module-inventory">
+                                            <i class="fa fa-shopping-cart"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="module-title">注文</h3>
+                                        </div>
+                                    </div>
+                                    <p class="module-subtitle">顧客の注文を処理・追跡します</p>
+                                </a>
+                                
+                                <a t-attf-href="/odoo/invoicing" class="module-card" tabindex="0" onclick="window.location=this.href">
+                                    <div class="module-header">
+                                        <div class="module-icon module-purchase">
+                                            <i class="fa fa-leaf"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="module-title">請求書</h3>
+                                        </div>
+                                    </div>
+                                    <p class="module-subtitle">請求書の作成と送信を管理します</p>
+                                </a>
+                                
+                                <a t-attf-href="/odoo/inventory" class="module-card" tabindex="0" onclick="window.location=this.href">
+                                    <div class="module-header">
+                                        <div class="module-icon module-warehouse">
+                                            <i class="fa fa-cubes"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="module-title">在庫</h3>
+                                        </div>
+                                    </div>
+                                    <p class="module-subtitle">在庫レベルと倉庫業務を管理します</p>
+                                </a>
+
+                                <a t-attf-href="/odoo/dashboards" class="module-card" tabindex="0" onclick="window.location=this.href">
+                                    <div class="module-header">
+                                        <div class="module-icon module-reporting">
+                                            <i class="fa fa-bar-chart"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="module-title">レポーティング</h3>
+                                        </div>
+                                    </div>
+                                    <p class="module-subtitle">各種とお見積もりデータ業務</p>
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Customer Management Section -->
+                        <div class="module-section">
+                            <div class="section-header">
+                                    <div class="section-icon">
+                                        <i class="fa fa-users"></i>
+                                     </div>
+                                    <div class="d-flex flex-cl">
+                                        顧客管理
+                                        <small class="text-muted ml-2 small-text">お客様を管理します</small>
+                                    </div>
+                            </div>
+                            <div class="modules-grid">
+                                <a t-attf-href="/odoo/action-56?view_type=list" class="module-card" tabindex="0" onclick="window.location=this.href">
+                                    <div class="module-header">
+                                        <div class="module-icon module-crm">
+                                            <i class="fa fa-users"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="module-title">取引先企業</h3>
+                                        </div>
+                                    </div>
+                                    <p class="module-subtitle">顧客関係管理</p>
+                                </a>
+                                
+                                <a t-attf-href="/odoo/contacts?view_type=list" class="module-card" tabindex="0" onclick="window.location=this.href">
+                                    <div class="module-header">
+                                        <div class="module-icon module-manufacturing">
+                                            <i class="fa fa-chain"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="module-title">連絡先管理</h3>
+                                        </div>
+                                    </div>
+                                    <p class="module-subtitle">顧客と連絡するための情報を管理します</p>
+                                </a>
+                                <a t-attf-href="/odoo/crm" class="module-card" tabindex="0" onclick="window.location=this.href">
+                                    <div class="module-header">
+                                        <div class="module-icon module-employee">
+                                            <i class="fa fa-users"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="module-title">営業管（SFA）</h3>
+                                        </div>
+                                    </div>
+                                    <p class="module-subtitle">案件進捗・売上の追跡管理</p>
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Human Resources Section -->
+                        <div class="module-section">
+                            <div class="section-header">
+                             <div class="section-icon">
+                                     <i class="fa fa-user"></i>
+                                     </div>
+                                <div class="d-flex flex-cl">
+                                        企業管理
+                                <small class="text-muted ml-2 small-text">企業管理やユーザーや従業員の採用や評価などの管理</small>
+
+                                </div>
+                            </div>
+                            <div class="modules-grid">
+                                <a t-attf-href="/odoo/companies" class="module-card" tabindex="0" onclick="window.location=this.href">
+                                    <div class="module-header">
+                                        <div class="module-icon module-company">
+                                            <i class="fa fa-building"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="module-title">自社情報</h3>
+                                        </div>
+                                    </div>
+                                    <p class="module-subtitle">親会社や支店などを管理しする機能</p>
+                                </a>
+
+                                 <!-- <a t-attf-href="/odoo/companies" class="module-card" tabindex="0" onclick="window.location=this.href">
+                                    <div class="module-header">
+                                        <div class="module-icon module-sales">
+                                            <i class="fa fa-building"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="module-title">支店</h3>
+                                        </div>
+                                    </div>
+                                    <p class="module-subtitle">親会社の子会社の管理</p>
+                                </a> -->
+                                
+                                <a t-attf-href="/odoo/departments?view_type=list" class="module-card" tabindex="0" onclick="window.location=this.href">
+                                    <div class="module-header">
+                                        <div class="module-icon module-inventory">
+                                            <i class="fa fa-sitemap"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="module-title">部門管理</h3>
+                                        </div>
+                                    </div>
+                                    <p class="module-subtitle">社内で特定の役割を持つグループ</p>
+                                </a>
+                                
+                                <a t-attf-href="/odoo/users" class="module-card" tabindex="0" onclick="window.location=this.href">
+                                    <div class="module-header">
+                                        <div class="module-icon module-employee">
+                                            <i class="fa fa-user"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="module-title">ユーザー管理</h3>
+                                        </div>
+                                    </div>
+                                    <p class="module-subtitle">プシステムやサービスを使う人を管理します</p>
+                                </a>
+                                
+                                <a t-attf-href="/odoo/employees?view_type=list" class="module-card" tabindex="0" onclick="window.location=this.href">
+                                    <div class="module-header">
+                                        <div class="module-icon module-warehouse">
+                                            <i class="fa fa-users"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="module-title">従業員管理</h3>
+                                        </div>
+                                    </div>
+                                    <p class="module-subtitle">教育やトレーニングをする人</p>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4">
+                        <!-- Right sidebar content will go here -->
+                        <div class="module-section">
+                            <div class="section-header">
+                                <div class="section-icon">
+                                    <i class="fa fa-calendar"></i>
+                                </div>
+                                カレンダー
+                            </div>
+                            <p class="text-muted">カレンダー機能は後で実装されます</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>

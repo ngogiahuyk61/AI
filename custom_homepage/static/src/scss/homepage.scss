@@ -1,0 +1,215 @@
+// Custom Home Page Styles
+// Variables
+$primary-color: #71639E;
+$light-bg: #f8f9fa;
+$white: white;
+$border-color: #e9ecef;
+$text-muted: #6c757d;
+$text-dark: #333;
+$shadow-light: rgba(0,0,0,0.1);
+$shadow-hover: rgba(113, 99, 158, 0.15);
+
+// Module colors
+$module-colors: (
+  sales: #28a745,
+  project: #17a2b8,
+  inventory: #6f42c1,
+  purchase: #fd7e14,
+  reporting: #20c997,
+  warehouse: #dc3545,
+  settings: #6c757d,
+  crm: #007bff,
+  manufacturing: #e83e8c,
+  hr: #28a745,
+  company: #17a2b8,
+  department: #6f42c1,
+  user: #6f42c1,
+  employee: #fd7e14
+);
+
+// Main container
+.custom-home-container {
+    background-color: $light-bg;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+// Welcome section
+.welcome-header {
+    text-align: center;
+    margin-bottom: 30px;
+    color: $primary-color;
+
+    .welcome-title {
+        font-size: 2.5rem;
+        font-weight: 300;
+        margin-bottom: 10px;
+        color: $primary-color;
+    }
+
+    .welcome-subtitle {
+        font-size: 1rem;
+        color: $text-muted;
+    }
+}
+
+// Module sections
+.module-section {
+    background: $white;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 2px 8px $shadow-light;
+    margin-bottom: 20px;
+
+    .section-header {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-start;
+        margin-bottom: 20px;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: $text-dark;
+
+        .section-icon {
+            margin-top: 0.5%;
+            width: 40px;
+            height: 40px;
+            margin-right: 12px;
+            background-color: $primary-color;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            i {
+                color: $white;
+                font-size: 14px;
+            }
+        }
+    }
+}
+
+.d-flex{
+    display: flex;
+}
+
+// Modules grid
+// .modules-grid {
+//     display: grid;
+//     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+//     gap: 15px;
+// }
+.modules-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* Creates exactly 3 columns of equal width */
+    gap: 15px;
+}
+
+.flex-cl{
+    display: flex;
+    flex-direction: column;
+}
+
+.small-text{
+    font-size: 13px !important;
+}
+
+// Module cards
+.module-card {
+    background: $white;
+    border: 0.9px solid $border-color;
+    border-radius: 8px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    box-shadow: rgba(0, 0, 0, 0.15) 0.95px 0.95px 1.6px;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px $shadow-hover;
+        border-color: $primary-color;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .module-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+
+        .module-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: $white;
+        }
+
+        .module-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+            color: $text-dark;
+        }
+    }
+
+    .module-subtitle {
+        font-size: 0.9rem;
+        color: $text-muted;
+        margin: 0;
+    }
+}
+
+// Generate module color classes
+@each $module, $color in $module-colors {
+    .module-#{$module} {
+        background-color: $color;
+    }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+    .custom-home-container {
+        padding: 10px;
+    }
+    
+    .welcome-header .welcome-title {
+        font-size: 2rem;
+    }
+    
+    .modules-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .module-section {
+        padding: 15px;
+    }
+}
+
+// Additional hover effects for better UX
+.module-card {
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba($primary-color, 0.1), transparent);
+        transition: left 0.5s;
+    }
+
+    &:hover::before {
+        left: 100%;
+    }
+}
