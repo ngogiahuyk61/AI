@@ -1,0 +1,28 @@
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+#performanceChart {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 300px;
+}
+
+.perf-filter-option.active {
+    background-color: #6b7280;
+    color: white;
+}
+.perf-filter-option.active:hover {
+    background-color: #4b5563;
+}

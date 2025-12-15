@@ -1,0 +1,210 @@
+/* Container chung */
+.validity-container {
+    font-family: 'Inter', sans-serif; /* Hoặc font mặc định của bạn */
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* --- TOP CARDS --- */
+.val-top-row {
+    display: flex;
+    gap: 20px;
+    width: 100%;
+}
+
+.val-card {
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    flex: 1; /* Chia đều width */
+}
+
+/* Card Xanh */
+.val-card-blue {
+    background: linear-gradient(90deg, #2b5fe0 0%, #4c91f0 100%);
+    color: white;
+}
+
+.val-card-blue .val-icon-box {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+/* Card Trắng */
+.val-card-white {
+    background: white;
+    color: #333;
+    position: relative;
+}
+
+.val-card-white .val-icon-box {
+    background: #fff5e6; /* Màu cam nhạt */
+    color: #ff8c00;
+}
+
+.crown-icon {
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    font-size: 12px;
+}
+
+/* Icon Box chung */
+.val-icon-box {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+}
+
+.val-card-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.val-card-title {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    opacity: 0.9;
+    margin-bottom: 4px;
+}
+
+.val-card-value {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.text-dark {
+    color: #1f2937;
+}
+
+/* --- MAIN CARD (BOTTOM) --- */
+.val-main-card {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.val-content-grid {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Cột thống kê text */
+.val-stats-list {
+    flex: 1;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.val-stat-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.val-stat-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.val-stat-item {
+    font-size: 14px;
+    color: #374151;
+    padding-left: 20px; /* Thụt đầu dòng */
+}
+
+.text-gray {
+    color: #9ca3af;
+    font-size: 13px;
+}
+
+/* Các chấm màu (Dots) */
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.dot-yellow { background-color: #fbbf24; }
+.dot-purple { background-color: #4f46e5; }
+.dot-blue { background-color: #3b82f6; }
+
+/* Phần Chart */
+.val-chart-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 40px;
+}
+
+.chart-container {
+    width: 250px;
+    height: 250px;
+    position: relative;
+}
+
+/* Custom Legend bên phải chart */
+.val-chart-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #1f2937;
+    font-weight: 500;
+}
+
+.legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.legend-val {
+    margin-left: auto;
+    color: #6b7280;
+}
+/* Validity Section CSS */
+/* Note: Most styling is handled by Tailwind classes in HTML to ensure consistency */
+
+.validity-section {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Đảm bảo canvas chart không bị vỡ trên màn hình nhỏ */
+#validityPieChart {
+    max-height: 250px;
+    width: 100% !important;
+}
