@@ -1,0 +1,42 @@
+{
+  "total_shared_edges": 0,
+  "shared_edges": [],
+  "merge_info": [
+    {
+      "master": "bathroom_1",
+      "slave": "balcony_1",
+      "type": "vertical",
+      "distance": 41
+    },
+    {
+      "master": "bathroom_2",
+      "slave": "balcony_1",
+      "type": "vertical",
+      "distance": 19
+    },
+    {
+      "master": "common_room_2",
+      "slave": "storage_1",
+      "type": "vertical",
+      "distance": 13
+    },
+    {
+      "master": "master_room_1",
+      "slave": "bathroom_2",
+      "type": "horizontal",
+      "distance": 18
+    },
+    {
+      "master": "master_room_1",
+      "slave": "common_room_2",
+      "type": "horizontal",
+      "distance": 29
+    },
+    {
+      "master": "common_room_1",
+      "slave": "bathroom_1",
+      "type": "horizontal",
+      "distance": 20
+    }
+  ]
+}

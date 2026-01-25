@@ -1,0 +1,113 @@
+{
+  "LivingRoom": {
+    "num": 1,
+    "rooms": [
+      {
+        "name": "LivingRoom",
+        "link": [
+          "MasterRoom",
+          "Bathroom_1",
+          "Bathroom_2",
+          "Storage",
+          "Balcony"
+        ],
+        "location": "center",
+        "size": "XL"
+      }
+    ]
+  },
+  "MasterRoom": {
+    "num": 1,
+    "rooms": [
+      {
+        "name": "MasterRoom",
+        "link": [
+          "LivingRoom",
+          "Storage"
+        ],
+        "location": "west",
+        "size": "L"
+      }
+    ]
+  },
+  "Kitchen": {
+    "num": 0,
+    "rooms": []
+  },
+  "Bathroom": {
+    "num": 2,
+    "rooms": [
+      {
+        "name": "Bathroom_1",
+        "link": [
+          "LivingRoom",
+          "Balcony"
+        ],
+        "location": "east",
+        "size": "M"
+      },
+      {
+        "name": "Bathroom_2",
+        "link": [
+          "LivingRoom",
+          "Balcony"
+        ],
+        "location": "north",
+        "size": "M"
+      }
+    ]
+  },
+  "DiningRoom": {
+    "num": 0,
+    "rooms": []
+  },
+  "ChildRoom": {
+    "num": 0,
+    "rooms": []
+  },
+  "StudyRoom": {
+    "num": 0,
+    "rooms": []
+  },
+  "SecondRoom": {
+    "num": 0,
+    "rooms": []
+  },
+  "GuestRoom": {
+    "num": 0,
+    "rooms": []
+  },
+  "Balcony": {
+    "num": 1,
+    "rooms": [
+      {
+        "name": "Balcony",
+        "link": [
+          "LivingRoom",
+          "Bathroom_1",
+          "Bathroom_2"
+        ],
+        "location": "northeast",
+        "size": "M"
+      }
+    ]
+  },
+  "Entrance": {
+    "num": 1,
+    "rooms": []
+  },
+  "Storage": {
+    "num": 1,
+    "rooms": [
+      {
+        "name": "Storage",
+        "link": [
+          "LivingRoom",
+          "MasterRoom"
+        ],
+        "location": "southwest",
+        "size": "XS"
+      }
+    ]
+  }
+}

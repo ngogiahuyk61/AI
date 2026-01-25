@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAI Enterprise - Admin Dashboard</title>
+    
+    <!-- 1. Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- 3. OverlayScrollbars -->
+    <link type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/overlayscrollbars/2.3.0/styles/overlayscrollbars.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/overlayscrollbars/2.3.0/browser/overlayscrollbars.browser.es6.min.js"></script>
+
+    <!-- 4. Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        
+        /* Custom Scrollbar fallback */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+        /* Toast Animation */
+        .toast-enter { transform: translateX(100%); opacity: 0; }
+        .toast-enter-active { transform: translateX(0); opacity: 1; transition: all 300ms ease-out; }
+        
+        /* Auth Background */
+        .auth-bg {
+            background-color: #0f172a;
+            background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900 h-screen overflow-hidden">
+
+    <!-- ========================================== -->
+    <!--          PHẦN 1: LOADING & AUTH            -->
+    <!-- ========================================== -->
+    
+    <!-- Loading Spinner -->
+    <div id="app-loading" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white transition-opacity duration-500">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+        <p class="text-gray-500 text-sm font-medium">Đang kết nối hệ thống Clerk...</p>
+    </div>
+
+    <!-- Màn hình Chào mừng (Auth Landing) -->
+    <div id="auth-landing" class="hidden fixed inset-0 z-[90] flex items-center justify-center auth-bg">
+        <div class="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-md mx-4 text-center fade-in">
+            <div class="w-16 h-16 bg-blue-600 rounded-xl mx-auto flex items-center justify-center mb-6 shadow-lg shadow-blue-500/30">
+                <i data-lucide="shield-check" class="w-8 h-8 text-white"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">WebAI Admin</h1>
+            <p class="text-gray-500 mb-8">Hệ thống quản trị doanh nghiệp.</p>
+            
+            <!-- Cảnh báo môi trường -->
+            <div id="env-warning" class="hidden mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-left shadow-sm">
+                <div class="flex items-start gap-3">
+                    <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600 shrink-0 mt-0.5"></i>
+                    <div>
+                        <p class="text-sm text-yellow-800 font-bold mb-1">Môi trường hạn chế</p>
+                        <p class="text-xs text-yellow-700" id="env-warning-text">
+                            Trình duyệt đang chặn kết nối bảo mật đến Clerk. 
+                            <br>Hãy sử dụng <b>Chế độ Demo</b> để xem trước.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <!-- Nút Demo (Ưu tiên khi lỗi) -->
+                <button onclick="handleDemoClick()" id="btn-demo" class="w-full bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-3">
+                    <i data-lucide="play-circle" class="w-5 h-5 text-blue-600"></i>
+                    <span>Vào Dashboard Demo</span>
+                </button>
+
+                <!-- Nút Login Thật -->
+                <button onclick="handleSignInClick()" id="btn-login-real" class="w-full bg-black text-white hover:bg-gray-800 font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3">
+                    <img src="https://img.clerk.com/static/logo-light.svg" alt="Clerk" class="h-5 grayscale brightness-200">
+                    <span>Đăng nhập Tài khoản thật</span>
+                </button>
+            </div>
+
+            <div class="mt-6 text-xs text-gray-400 border-t border-gray-100 pt-4 flex justify-between">
+                <span id="auth-status">Checking connection...</span>
+                <a href="#" onclick="alert('Để chạy thật:\n1. Tải file về máy.\n2. Cài VS Code + Live Server extension.\n3. Chuột phải file -> Open with Live Server.')" class="hover:underline hover:text-blue-500">Hướng dẫn chạy thật</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!--          PHẦN 2: DASHBOARD UI              -->
+    <!-- ========================================== -->
+    <div id="dashboard-container" class="hidden h-full flex flex-col">
+        
+        <div id="toast-container" class="fixed top-16 right-4 z-[70] flex flex-col gap-2"></div>
+
+        <div class="flex flex-1 overflow-hidden">
+            <!-- SIDEBAR -->
+            <aside id="sidebar" class="w-[280px] bg-slate-900 text-slate-300 flex flex-col transition-all duration-300 shrink-0 shadow-xl z-40 relative h-full">
+                <div class="h-16 flex items-center px-4 border-b border-slate-800 shrink-0 bg-slate-950 text-white shadow-sm gap-2 cursor-pointer hover:bg-slate-900 transition-colors" onclick="setActiveModule(3)">
+                    <div class="w-8 h-8 rounded bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white shrink-0">W</div>
+                    <div class="sidebar-text overflow-hidden">
+                        <div class="text-sm font-bold truncate">WebAI Corp</div>
+                        <div class="text-[10px] text-slate-400 truncate">Enterprise Workspace</div>
+                    </div>
+                    <i data-lucide="chevrons-up-down" class="w-4 h-4 ml-auto text-slate-500 sidebar-text"></i>
+                </div>
+
+                <div id="sidebar-scroll-area" class="flex-1 overflow-y-auto py-4 custom-scroll">
+                    <div id="sidebar-menu" class="space-y-1"></div>
+                </div>
+
+                <div class="p-4 border-t border-slate-800 bg-slate-950 shrink-0">
+                    <div class="bg-slate-900 rounded-lg p-3 mb-2 border border-slate-800 sidebar-text">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-medium text-slate-400">Credits</span>
+                            <span class="text-xs font-bold text-green-400" id="credit-display">Unlimited</span>
+                        </div>
+                        <div class="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                            <div class="bg-green-500 h-full w-[100%]"></div>
+                        </div>
+                    </div>
+                    <button onclick="handleSignOutClick()" class="flex items-center gap-3 text-xs text-slate-500 hover:text-white w-full px-2 py-2 rounded transition-colors justify-center">
+                        <i data-lucide="log-out" class="w-3 h-3"></i> 
+                        <span class="sidebar-text">Đăng xuất</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- MAIN CONTENT -->
+            <div class="flex-1 flex flex-col min-w-0 bg-gray-50 h-full relative">
+                <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm shrink-0">
+                    <div class="flex items-center gap-4">
+                        <button onclick="toggleSidebar()" class="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors">
+                            <i data-lucide="menu" class="w-5 h-5"></i>
+                        </button>
+                        <div class="hidden sm:block">
+                            <h1 id="page-title" class="text-lg font-bold text-gray-800 leading-tight">Dashboard</h1>
+                            <p id="page-desc" class="text-xs text-gray-500">Tổng quan hệ thống</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 sm:gap-6">
+                        <button class="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+                            <i data-lucide="bell" class="w-5 h-5"></i>
+                            <span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                        </button>
+
+                        <div class="pl-2 border-l border-gray-200 flex items-center gap-3">
+                            <div class="text-right hidden md:block">
+                                <p class="text-sm font-bold text-gray-800" id="clerk-user-name">Guest</p>
+                                <p class="text-[10px] text-purple-600 font-bold uppercase tracking-wide bg-purple-50 px-2 py-0.5 rounded text-right" id="clerk-user-role">Administrator</p>
+                            </div>
+                            <!-- Clerk User Button Mount Point -->
+                            <div id="user-button-mount" class="w-8 h-8 rounded-full bg-gray-200"></div>
+                        </div>
+                    </div>
+                </header>
+
+                <main id="main-scroll-area" class="flex-1 p-4 sm:p-6 overflow-y-auto relative custom-scroll">
+                    <div id="content-area" class="max-w-7xl mx-auto h-full flex flex-col"></div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!--          PHẦN 3: LOGIC                     -->
+    <!-- ========================================== -->
+    
+    <script>
+        // --- 1. CONFIGURATION ---
+        const MY_CLERK_KEY = 'pk_test_c2V0dGxpbmcta2l0dGVuLTEyLmNsZXJrLmFjY291bnRzLmRldiQ';
+
+        // --- 2. UTILS ---
+        const safeOverlayScrollbars = (element, options) => {
+            if (typeof window.OverlayScrollbarsGlobal !== 'undefined' && window.OverlayScrollbarsGlobal.OverlayScrollbars) {
+                return window.OverlayScrollbarsGlobal.OverlayScrollbars(element, options);
+            }
+            element.classList.add('overflow-y-auto'); 
+            return null;
+        };
+
+        // --- 3. MOCK CLERK (CHO CHẾ ĐỘ DEMO) ---
+        class MockClerk {
+            constructor() { 
+                this.user = null; 
+                this.isMock = true; 
+            }
+            async load() { return; } 
+            openSignIn() {
+                const mockUser = {
+                    id: "user_admin_demo",
+                    fullName: "Demo Admin",
+                    primaryEmailAddress: { emailAddress: "admin@webai.com" },
+                    imageUrl: "https://www.svgrepo.com/show/382099/female-avatar-girl-face-woman-user-2.svg"
+                };
+                this.user = mockUser;
+                handleLoginSuccess(mockUser, true);
+            }
+            signOut() {
+                this.user = null;
+                handleLogoutSuccess();
+            }
+            mountUserButton(el) {
+                if(!this.user) return;
+                el.innerHTML = `<div class="w-8 h-8 rounded-full bg-cover bg-center border-2 border-white shadow-sm cursor-pointer hover:ring-2 hover:ring-blue-500" style="background-image: url('${this.user.imageUrl}');" onclick="if(confirm('Thoát chế độ Demo?')) window.Clerk.signOut()"></div>`;
+            }
+        }
+
+        // --- 4. CORE INIT LOGIC ---
+        let isClerkRealLoaded = false;
+
+        const initApp = async () => {
+            // Check file protocol
+            if (window.location.protocol === 'file:') {
+                showEnvironmentWarning("Bạn đang chạy file trực tiếp. Clerk sẽ không hoạt động. Hãy dùng Live Server.");
+                updateAuthStatus('error');
+            }
+
+            try {
+                // Tải script Clerk thật
+                await loadScript("https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js", MY_CLERK_KEY);
+                
+                // Chờ khởi tạo
+                if (typeof window.Clerk !== 'undefined') {
+                    const currentUrl = window.location.href;
+                    
+                    // --- UPDATE V5: Sử dụng params chuẩn mới để tránh warning deprecated ---
+                    await window.Clerk.load({
+                        // Bỏ các params signInUrl/signUpUrl cũ vì chúng ta dùng Modal
+                        // Chỉ cần cấu hình redirect sau khi login xong để tránh lỗi 404
+                        signInForceRedirectUrl: currentUrl, 
+                        signUpForceRedirectUrl: currentUrl,
+                    });
+
+                    isClerkRealLoaded = true;
+                    
+                    // Nếu đã login từ trước (cookie còn lưu), vào thẳng Dashboard
+                    if (window.Clerk.user) {
+                        handleLoginSuccess(window.Clerk.user, false);
+                    } else {
+                        // Chưa login -> Hiện trang chào mừng
+                        updateAuthStatus('ready');
+                        document.getElementById('auth-landing').classList.remove('hidden');
+                    }
+                } else {
+                    throw new Error("Clerk Object missing");
+                }
+
+            } catch (err) {
+                console.warn("Lỗi kết nối Clerk thật:", err);
+                isClerkRealLoaded = false;
+                
+                // Hiện trang chào mừng nhưng cảnh báo lỗi
+                document.getElementById('auth-landing').classList.remove('hidden');
+                
+                showEnvironmentWarning(`Môi trường Sandbox không hỗ trợ Clerk Auth. Vui lòng dùng nút "Vào Dashboard Demo".`);
+                updateAuthStatus('error');
+            } finally {
+                // LUÔN LUÔN TẮT LOADING spinner dù thành công hay thất bại
+                document.getElementById('app-loading').classList.add('hidden');
+            }
+        };
+
+        function showEnvironmentWarning(msg) {
+            const warningBox = document.getElementById('env-warning');
+            const warningText = document.getElementById('env-warning-text');
+            warningText.innerHTML = msg; 
+            warningBox.classList.remove('hidden');
+        }
+
+        function updateAuthStatus(status) {
+            const el = document.getElementById('auth-status');
+            const btnReal = document.getElementById('btn-login-real');
+            const btnDemo = document.getElementById('btn-demo');
+            
+            if (status === 'ready') {
+                el.innerHTML = `<span class="text-green-600 font-medium">● Đã kết nối máy chủ Clerk</span>`;
+                btnReal.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-600');
+                btnReal.classList.add('bg-black', 'hover:bg-gray-800');
+                btnReal.disabled = false;
+                
+                btnDemo.className = "w-full bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 font-medium py-3 rounded-xl transition-all flex items-center justify-center gap-3";
+            } else {
+                el.innerHTML = `<span class="text-red-500 font-medium">● Mất kết nối máy chủ</span>`;
+                
+                btnReal.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-600');
+                btnReal.classList.remove('bg-black', 'hover:bg-gray-800');
+                
+                btnDemo.className = "w-full bg-blue-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:bg-blue-700 flex items-center justify-center gap-3 animate-pulse";
+            }
+        }
+
+        // --- USER ACTIONS ---
+
+        // 1. Bấm nút Login Thật
+        window.handleSignInClick = () => { 
+            if (isClerkRealLoaded && window.Clerk) {
+                window.Clerk.openSignIn(); 
+            } else {
+                alert("Lỗi: Không thể kết nối server Clerk từ môi trường này.\n\nNguyên nhân: Trình duyệt chặn cookie bên thứ 3 trong khung chat/sandbox.\n\nGiải pháp: Vui lòng nhấn nút 'Vào Dashboard Demo' phía trên.");
+            }
+        };
+
+        // 2. Bấm nút Demo
+        window.handleDemoClick = () => {
+            window.Clerk = new MockClerk();
+            window.Clerk.openSignIn();
+        };
+
+        // 3. Bấm đăng xuất
+        window.handleSignOutClick = () => { 
+            if (window.Clerk) window.Clerk.signOut(); 
+        };
+
+        // --- SPA NAVIGATION HANDLERS ---
+        
+        function handleLoginSuccess(user, isDemo) {
+            document.getElementById('auth-landing').classList.add('hidden');
+            document.getElementById('dashboard-container').classList.remove('hidden');
+            initDashboard(user, isDemo);
+        }
+
+        function handleLogoutSuccess() {
+            document.getElementById('dashboard-container').classList.add('hidden');
+            document.getElementById('auth-landing').classList.remove('hidden');
+            lucide.createIcons();
+            
+            if (!isClerkRealLoaded) updateAuthStatus('error');
+            else updateAuthStatus('ready');
+        }
+
+        function loadScript(src, key) {
+            return new Promise((resolve, reject) => {
+                const existing = document.querySelector(`script[src="${src}"]`);
+                if (existing) existing.remove();
+
+                const script = document.createElement("script");
+                script.src = src;
+                script.async = true;
+                script.crossOrigin = "anonymous";
+                script.setAttribute('data-clerk-publishable-key', key);
+                
+                script.onload = () => resolve();
+                script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+                
+                document.body.appendChild(script);
+            });
+        }
+
+        // --- 5. DASHBOARD LOGIC ---
+        function initDashboard(clerkUser, isDemo) {
+            const email = clerkUser.primaryEmailAddress ? clerkUser.primaryEmailAddress.emailAddress : "";
+            const name = clerkUser.fullName || email.split('@')[0];
+            
+            document.getElementById('clerk-user-name').innerText = name;
+            
+            const roleEl = document.getElementById('clerk-user-role');
+            if (isDemo) {
+                roleEl.innerText = "Demo Administrator";
+                roleEl.className = "text-[10px] text-orange-600 font-bold uppercase tracking-wide bg-orange-50 px-2 py-0.5 rounded text-right";
+            } else {
+                roleEl.innerText = "Owner / Admin"; 
+                roleEl.className = "text-[10px] text-purple-600 font-bold uppercase tracking-wide bg-purple-50 px-2 py-0.5 rounded text-right";
+            }
+            
+            const mountEl = document.getElementById('user-button-mount');
+            if (mountEl) window.Clerk.mountUserButton(mountEl);
+
+            safeOverlayScrollbars(document.getElementById('sidebar-scroll-area'), { scrollbars: { theme: 'os-theme-dark', autoHide: 'leave', clickScroll: true }, overflow: { x: 'hidden' } });
+            safeOverlayScrollbars(document.getElementById('main-scroll-area'), { scrollbars: { theme: 'os-theme-dark', autoHide: 'leave', clickScroll: true }, overflow: { x: 'hidden' } });
+
+            renderSidebar();
+            renderView(); 
+            lucide.createIcons();
+            
+            const msg = isDemo ? `Đang xem chế độ Demo quyền Admin.` : `Đăng nhập thành công: ${name}`;
+            showToast(msg, 'success');
+        }
+
+        // --- MOCK DATA ---
+        let state = {
+            activeModuleId: 3,
+            sidebarOpen: true,
+            expandedGroups: { "Người dùng": true, "Dịch vụ & Core": true },
+            workspaces: [
+                { id: 101, name: "WebAI Corp HQ", type: "Enterprise", members: 12, status: "Active" },
+                { id: 102, name: "Marketing Team", type: "Pro", members: 5, status: "Active" }
+            ]
+        };
+
+        const MODULE_GROUPS = [
+            { 
+                groupName: "Người dùng", icon: "users", 
+                modules: [
+                    { id: 1, name: "Quản lý người dùng", code: "USER_MGMT", icon: "user", desc: "Tài khoản sử dụng AI, Email, Status" },
+                    { id: 2, name: "Quản lý vai trò", code: "ROLE_MGMT", icon: "shield", desc: "Phân quyền Owner / Member / Viewer" },
+                    { id: 3, name: "Quản lý workspace", code: "WORKSPACE", icon: "briefcase", desc: "Dự án và không gian làm việc" }
+                ]
+            },
+            { 
+                groupName: "Dịch vụ & Core", icon: "cpu", 
+                modules: [
+                    { id: 4, name: "Gói dịch vụ AI", code: "PLAN_MGMT", icon: "layers", desc: "Free / Pro / Enterprise" },
+                    { id: 6, name: "Quản lý tín dụng", code: "CREDIT_MGMT", icon: "coins", desc: "Credit / Token Balance" },
+                    { id: 9, name: "Dự án AI", code: "PROJECT_MGMT", icon: "folder-kanban", desc: "Quản lý bài toán AI" }
+                ]
+            }
+        ];
+
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            const texts = document.querySelectorAll('.sidebar-text');
+            state.sidebarOpen = !state.sidebarOpen;
+            if (state.sidebarOpen) {
+                sb.style.width = '280px';
+                texts.forEach(t => t.style.display = 'block');
+            } else {
+                sb.style.width = '64px';
+                texts.forEach(t => t.style.display = 'none');
+            }
+        }
+
+        function toggleGroup(groupName) {
+            state.expandedGroups[groupName] = !state.expandedGroups[groupName];
+            renderSidebar();
+        }
+
+        function setActiveModule(id) {
+            state.activeModuleId = id;
+            renderSidebar();
+            renderView();
+        }
+
+        function renderSidebar() {
+            const container = document.getElementById('sidebar-menu');
+            let html = '';
+            MODULE_GROUPS.forEach(group => {
+                const isExpanded = state.expandedGroups[group.groupName];
+                html += `
+                    <div class="mb-1">
+                        <div onclick="toggleGroup('${group.groupName}')" class="flex items-center justify-between px-4 py-3 cursor-pointer text-xs font-bold text-slate-500 uppercase tracking-wider hover:text-white transition-colors group select-none">
+                            <span class="flex items-center gap-3"><i data-lucide="${group.icon}" class="w-4 h-4"></i><span class="sidebar-text">${group.groupName}</span></span>
+                            <i data-lucide="${isExpanded ? 'chevron-down' : 'chevron-right'}" class="w-3 h-3 sidebar-text"></i>
+                        </div>
+                        <div class="space-y-0.5 overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}">
+                            ${group.modules.map(mod => `
+                                <div onclick="setActiveModule(${mod.id})" class="flex items-center gap-3 px-4 py-2 text-sm cursor-pointer border-l-4 transition-all pl-6 ${state.activeModuleId === mod.id ? 'border-blue-500 bg-slate-800 text-white font-medium' : 'border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200'}">
+                                    <span class="sidebar-text truncate" title="${mod.name}">${mod.name}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>`;
+            });
+            container.innerHTML = html;
+            lucide.createIcons();
+            if (!state.sidebarOpen) document.querySelectorAll('.sidebar-text').forEach(t => t.style.display = 'none');
+        }
+
+        function renderView() {
+            const mod = MODULE_GROUPS.flatMap(g => g.modules).find(m => m.id === state.activeModuleId);
+            document.getElementById('page-title').innerText = mod.name;
+            document.getElementById('page-desc').innerText = mod.desc;
+            const area = document.getElementById('content-area');
+            area.className = "fade-in max-w-7xl mx-auto h-full flex flex-col";
+            
+            if (mod.code === "WORKSPACE") {
+                area.innerHTML = `
+                    <div class="flex flex-col gap-6 h-full">
+                         <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-4 items-start">
+                             <div class="bg-blue-100 p-2 rounded-lg text-blue-600"><i data-lucide="info" class="w-6 h-6"></i></div>
+                             <div>
+                                 <h3 class="font-bold text-blue-800">Clerk Workspace Demo</h3>
+                                 <p class="text-sm text-blue-600 mt-1">Dữ liệu hiển thị bên dưới là Mock Data để demo giao diện. Trong thực tế, bạn sẽ dùng API Backend của Clerk để lấy danh sách Organization.</p>
+                             </div>
+                         </div>
+                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${state.workspaces.map(ws => `
+                                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all cursor-pointer group">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded bg-gradient-to-br from-gray-700 to-gray-900 text-white flex items-center justify-center font-bold text-lg">${ws.name[0]}</div>
+                                            <div>
+                                                <h4 class="font-bold text-gray-800 group-hover:text-blue-600 transition-colors">${ws.name}</h4>
+                                                <span class="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500">${ws.type}</span>
+                                            </div>
+                                        </div>
+                                        <i data-lucide="more-horizontal" class="text-gray-400"></i>
+                                    </div>
+                                    <div class="flex justify-between items-center text-sm text-gray-500 border-t border-gray-100 pt-4">
+                                        <span class="flex items-center gap-1"><i data-lucide="users" class="w-4 h-4"></i> ${ws.members} members</span>
+                                        <span class="text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full text-xs">${ws.status}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                            <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-all cursor-pointer" onclick="showToast('Tính năng đang phát triển', 'info')">
+                                <i data-lucide="plus" class="w-10 h-10 mb-2"></i>
+                                <span class="font-medium">Create Organization</span>
+                            </div>
+                         </div>
+                    </div>`;
+            } else {
+                area.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-400 bg-white rounded-xl border border-gray-200 border-dashed m-4"><i data-lucide="${mod.icon}" class="w-12 h-12 mb-4 opacity-50"></i><p class="text-lg font-medium">Module: ${mod.name}</p><p class="text-sm mt-1">Nội dung module này sẽ được hiển thị tại đây.</p></div>`;
+            }
+            lucide.createIcons();
+        }
+
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const div = document.createElement('div');
+            const colors = type === 'success' ? 'bg-green-600' : type === 'warning' ? 'bg-yellow-500' : 'bg-blue-600';
+            div.className = `toast ${colors} text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 min-w-[300px] toast-enter z-[100]`;
+            div.innerHTML = `<i data-lucide="${type==='success'?'check':'info'}" class="w-4 h-4"></i> <span class="text-sm font-medium">${msg}</span>`;
+            container.appendChild(div);
+            lucide.createIcons();
+            requestAnimationFrame(() => { div.classList.remove('toast-enter'); div.classList.add('toast-enter-active'); });
+            setTimeout(() => { div.remove(); }, 3000);
+        }
+
+        // --- START APP ---
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+    </script>
+</body>
+</html>

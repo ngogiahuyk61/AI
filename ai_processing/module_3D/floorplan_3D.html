@@ -1,0 +1,2017 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archi-Vision Core V6.7 - Matrix Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --bg-color: #09090b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: #f4f4f5;
+            overflow: hidden;
+            margin: 0;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            background: #09090b;
+        }
+
+        .ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 280px;
+            max-height: 94vh;
+            background: rgba(15, 15, 20, 0.85);
+            backdrop-filter: blur(20px);
+            padding: 20px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .build-btn {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .build-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.5);
+        }
+
+        .log-box {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: #818cf8;
+            margin-top: 15px;
+            max-height: 250px;
+            overflow-y: auto;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 12px;
+            line-height: 1.6;
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 10px;
+        }
+
+        textarea {
+            scrollbar-width: none;
+            background: rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="canvas-container" id="threeContainer"></div>
+
+    <div class="ui-panel custom-scroll">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="bg-indigo-600 p-2 rounded-xl"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path d="m21 16-4 4-4-4" />
+                    <path d="M17 20V4" />
+                    <path d="m3 8 4-4 4 4" />
+                    <path d="M7 4v16" />
+                </svg></div>
+            <div>
+                <h1 class="font-black italic text-lg leading-none uppercase tracking-tighter">Matrix <span
+                        class="text-indigo-500 font-light not-italic">V6.7</span></h1>
+                <p class="text-[8px] text-zinc-500 font-bold uppercase tracking-[0.2em]">Safe-Zone Logic Updated</p>
+            </div>
+        </div>
+
+        <div class="space-y-4">
+            <button id="btnBuild"
+                class="build-btn w-full text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">
+                FLOORPLAN 3D
+            </button>
+
+            <div class="pt-2 border-t border-white/5">
+                <a href="http://localhost:8002/module_3D_OSM/floorplan_3D_OSM.html"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg">
+                    MAP OSM 3D
+                </a>
+            </div>
+
+
+            <div class="pt-2 border-t border-white/5">
+                <a href="http://localhost:8002/module_3D_OSM/floorplan_3D_OSM.html"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg">
+                    FLOORPLAN 360
+                </a>
+            </div>
+            
+            <div>
+                <label class="text-[9px] text-zinc-500 block mb-2 font-bold uppercase tracking-widest">JSON Layout
+                    Data</label>
+                <textarea id="jsonInput" rows="10"
+                    class="w-full border border-zinc-800 rounded-xl p-3 text-[9px] font-mono text-zinc-400 focus:border-indigo-500 outline-none transition-all"
+                    placeholder="Dán JSON vào đây..."></textarea>
+            </div>
+
+            <div class="bg-black/40 rounded-xl p-3 border border-white/5">
+                <div class="text-[9px] font-black text-zinc-600 uppercase mb-2">Matrix Activity Log</div>
+                <div id="logBox" class="log-box custom-scroll">
+                    > Engine Standby.<br>
+                    > Safe-Zone Entrance Logic: Active.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const SCALE = 0.025;
+        const WALL_H = 5.0;
+        const WALL_THICKNESS = 0.15;
+
+        // --- EMBEDDED BALCONY ASSET CODE ---
+        const BALCONY_ASSET_CODE = `
+            const materials = {};
+
+            function createMaterials() {
+                const createWoodTex = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 512; canvas.height = 512;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#Cfb096'; ctx.fillRect(0,0,512,512);
+                    ctx.strokeStyle = '#BE9E82'; ctx.lineWidth = 5;
+                    for(let i=0; i<512; i+=40) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(512, i); ctx.stroke(); }
+                    const tex = new THREE.CanvasTexture(canvas);
+                    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+                    return tex;
+                };
+
+                materials.wall = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
+                materials.wood = new THREE.MeshStandardMaterial({ map: createWoodTex(), roughness: 0.7 });
+                materials.floorTile = new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.9 });
+                materials.fabricCream = new THREE.MeshStandardMaterial({ color: 0xFDFBF7, roughness: 1 });
+                materials.fabricAccent = new THREE.MeshStandardMaterial({ color: 0xD99475, roughness: 1 });
+                materials.metalBlack = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.5, roughness: 0.2 });
+                materials.metalGold = new THREE.MeshStandardMaterial({ color: 0xFFD700, metalness: 0.8, roughness: 0.2 });
+                materials.glass = new THREE.MeshPhysicalMaterial({ color: 0xffffff, transmission: 0.9, opacity: 0.3, transparent: true, roughness: 0.1 });
+                materials.leaf = new THREE.MeshStandardMaterial({ color: 0x4a6741, roughness: 0.8 });
+                materials.lightBulbOff = new THREE.MeshStandardMaterial({ color: 0xffffff });
+                materials.lightBulbOn = new THREE.MeshStandardMaterial({ color: 0xffffee, emissive: 0xfff0aa, emissiveIntensity: 2 });
+                materials.book1 = new THREE.MeshStandardMaterial({ color: 0x4a90e2 });
+                materials.book2 = new THREE.MeshStandardMaterial({ color: 0xe67e22 });
+                materials.book3 = new THREE.MeshStandardMaterial({ color: 0x27ae60 });
+            }
+
+            // --- Helpers ---
+            function createBox(w, h, d, mat, x, y, z, rx=0, ry=0, rz=0) {
+                const geo = new THREE.BoxGeometry(w, h, d);
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(x, y, z);
+                mesh.rotation.set(rx, ry, rz);
+                mesh.castShadow = mesh.receiveShadow = true;
+                return mesh;
+            }
+
+            function createArchitecture() {
+                const group = new THREE.Group();
+                
+                // Sàn
+                const floor = createBox(12, 0.4, 16, materials.wood, 0, -0.2, 0);
+                group.add(floor);
+
+                // Lan can phía sau
+                const backRailBase = createBox(12, 0.8, 0.3, materials.wall, 0, 0.4, -8.15);
+                group.add(backRailBase);
+                const backRailTop = createBox(12.2, 0.05, 0.1, materials.metalBlack, 0, 1.2, -8.15);
+                group.add(backRailTop);
+                
+                // Cột lan can phía sau
+                const postGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.4);
+                for(let x = -5.5; x <= 5.5; x += 1.5) {
+                    const post = new THREE.Mesh(postGeo, materials.metalBlack);
+                    post.position.set(x, 1.0, -8.15);
+                    group.add(post);
+                }
+
+                // Tường đục lỗ duy nhất (Bên trái)
+                const sideWallShape = new THREE.Shape();
+                sideWallShape.moveTo(0, 0); sideWallShape.lineTo(16, 0); sideWallShape.lineTo(16, 8); sideWallShape.lineTo(0, 8);
+                const hole = new THREE.Path();
+                hole.moveTo(4, 0); hole.lineTo(4, 5); hole.absarc(6, 5, 2, Math.PI, 0, true); hole.lineTo(8, 0);
+                sideWallShape.holes.push(hole);
+                
+                const sideWallGeo = new THREE.ExtrudeGeometry(sideWallShape, { depth: 0.4, bevelEnabled: false });
+                const sideWall = new THREE.Mesh(sideWallGeo, materials.wall);
+                sideWall.rotation.y = Math.PI/2;
+                sideWall.position.set(-6.2, 0, 8); // Xoay 90 độ, đặt ở bên trái
+                sideWall.receiveShadow = true;
+                group.add(sideWall);
+
+                // Lan can phía trước
+                const railBase = createBox(12, 0.8, 0.3, materials.wall, 0, 0.4, 8.15);
+                group.add(railBase);
+                const railTop = createBox(12.2, 0.05, 0.1, materials.metalBlack, 0, 1.2, 8.15);
+                group.add(railTop);
+
+                // Lan can bên phải
+                const rightRailBase = createBox(0.3, 0.8, 16.4, materials.wall, 6.15, 0.4, 0);
+                group.add(rightRailBase);
+                const rightRailTop = createBox(0.1, 0.05, 16.4, materials.metalBlack, 6.15, 1.2, 0);
+                group.add(rightRailTop);
+
+                // Cột lan can (Trước & Phải)
+                for(let x = -5.5; x <= 5.5; x += 1.5) {
+                    const post = new THREE.Mesh(postGeo, materials.metalBlack);
+                    post.position.set(x, 1.0, 8.15);
+                    group.add(post);
+                }
+                for(let z = -7.5; z <= 7.5; z += 1.5) {
+                    const post = new THREE.Mesh(postGeo, materials.metalBlack);
+                    post.position.set(6.15, 1.0, z);
+                    group.add(post);
+                }
+
+                scene.add(group);
+            }
+
+            function createFurniture() {
+                // Sofa
+                const sofa = new THREE.Group();
+                sofa.add(createBox(6, 0.4, 2, materials.wood, 0, 0.2, 0));
+                sofa.add(createBox(5.8, 0.3, 1.8, materials.fabricCream, 0, 0.55, 0));
+                // Pillows
+                sofa.add(createBox(0.8, 0.8, 0.2, materials.fabricAccent, -2, 0.9, -0.7, -0.3, 0.2));
+                sofa.add(createBox(0.8, 0.8, 0.2, materials.fabricAccent, 2, 0.9, -0.7, -0.3, -0.2));
+                sofa.position.set(2, 0, -5);
+                scene.add(sofa);
+
+                // Bàn cà phê
+                const table = new THREE.Group();
+                table.add(createBox(1.8, 0.1, 1.8, materials.wood, 0, 0.6, 0));
+                table.add(createBox(0.1, 0.6, 0.1, materials.metalBlack, 0.7, 0.3, 0.7));
+                table.add(createBox(0.1, 0.6, 0.1, materials.metalBlack, -0.7, 0.3, 0.7));
+                table.add(createBox(0.1, 0.6, 0.1, materials.metalBlack, 0.7, 0.3, -0.7));
+                table.add(createBox(0.1, 0.6, 0.1, materials.metalBlack, -0.7, 0.3, -0.7));
+                
+                // Laptop trên bàn
+                const laptop = new THREE.Group();
+                const lpBase = createBox(0.6, 0.02, 0.4, materials.metalBlack, -0.3, 0.62, 0);
+                const lpScreen = createBox(0.6, 0.02, 0.4, materials.metalBlack, -0.3, 0.82, -0.2);
+                lpScreen.rotation.x = -Math.PI/2.5;
+                const screenLight = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.35), new THREE.MeshBasicMaterial({color: 0x00ccff}));
+                screenLight.position.set(-0.3, 0.82, -0.185); screenLight.rotation.x = -Math.PI/2.5;
+                laptop.add(lpBase, lpScreen, screenLight);
+                table.add(laptop);
+
+                // Ly cà phê
+                const cupGroup = new THREE.Group();
+                const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.12, 16), new THREE.MeshStandardMaterial({color: 0xffffff}));
+                cup.position.y = 0.66;
+                const handle = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.01, 8, 16, Math.PI), new THREE.MeshStandardMaterial({color: 0xffffff}));
+                handle.position.set(0.08, 0.66, 0); handle.rotation.z = -Math.PI/2;
+                cupGroup.add(cup, handle);
+                cupGroup.position.set(0.4, 0, 0.3);
+                table.add(cupGroup);
+
+                // Sách trên bàn
+                const bookTable = createBox(0.3, 0.05, 0.4, materials.book1, 0.3, 0.63, -0.4, 0, 0.2);
+                table.add(bookTable);
+
+                table.position.set(2, 0, -1.5);
+                scene.add(table);
+
+                // Thảm
+                const rugGeo = new THREE.PlaneGeometry(6, 8);
+                const rug = new THREE.Mesh(rugGeo, new THREE.MeshStandardMaterial({color: 0xd7ccc8, roughness: 1}));
+                rug.rotation.x = -Math.PI/2;
+                rug.position.set(2, 0.01, -3);
+                scene.add(rug);
+
+                // Kệ sách gắn tường
+                const shelf = new THREE.Group();
+                shelf.add(createBox(3, 0.1, 0.6, materials.wood, 0, 0, 0));
+                shelf.add(createBox(0.08, 0.4, 0.4, materials.book1, -0.8, 0.25, 0));
+                shelf.add(createBox(0.08, 0.45, 0.4, materials.book2, -0.7, 0.27, 0));
+                shelf.add(createBox(0.08, 0.38, 0.4, materials.book3, -0.6, 0.24, 0));
+                shelf.rotation.y = Math.PI / 2;
+                shelf.position.set(-5.9, 3.5, -5); 
+                scene.add(shelf);
+            }
+
+            function createDecorations() {
+                // Cây cảnh
+                function createPlant(x, z, size=1) {
+                    const p = new THREE.Group();
+                    const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.4*size, 0.3*size, 0.6*size, 16), new THREE.MeshStandardMaterial({color: 0x8d6e63}));
+                    pot.position.y = 0.3*size; p.add(pot);
+                    for(let i=0; i<6; i++) {
+                        const leaf = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4*size), materials.leaf);
+                        leaf.position.set(Math.sin(i)*0.3*size, (0.8 + i*0.2)*size, Math.cos(i)*0.3*size);
+                        leaf.scale.set(1-i*0.1, 1-i*0.1, 1-i*0.1);
+                        p.add(leaf);
+                    }
+                    p.position.set(x, 0, z);
+                    scene.add(p);
+                }
+                createPlant(-4, -6, 1.2);
+                createPlant(-4, 2, 0.8);
+                createPlant(5, 7, 1);
+
+                // Đèn sàn
+                const lamp = new THREE.Group();
+                const base = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.05, 16), materials.metalBlack);
+                const pole = createBox(0.05, 4, 0.05, materials.metalBlack, 0, 2, 0);
+                const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 0.8, 16, 1, true), materials.fabricCream);
+                shade.position.y = 4;
+                const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1), materials.lightBulbOff);
+                bulb.position.y = 4;
+                const pLight = new THREE.PointLight(0xfff0aa, 0, 5);
+                pLight.position.y = 4;
+                lamp.add(base, pole, shade, bulb, pLight);
+                lamp.position.set(-4, 0, -3);
+                scene.add(lamp);
+
+                // Tranh treo tường
+                const painting = new THREE.Group();
+                const frame = createBox(2, 2.5, 0.1, materials.wood, 0, 0, 0);
+                const canvas = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 2.3), new THREE.MeshStandardMaterial({color: 0xf5f5f5}));
+                canvas.position.z = 0.06;
+                for(let i=0; i<5; i++) {
+                    const dot = new THREE.Mesh(new THREE.CircleGeometry(0.1, 16), new THREE.MeshBasicMaterial({color: Math.random() * 0xffffff}));
+                    dot.position.set((Math.random()-0.5)*1.5, (Math.random()-0.5)*2, 0.01);
+                    canvas.add(dot);
+                }
+                painting.add(frame, canvas);
+                painting.rotation.y = Math.PI / 2;
+                painting.position.set(-5.9, 4.5, -2.5);
+                scene.add(painting);
+
+                // Dây đèn LED treo
+                const wireCurve = new THREE.CatmullRomCurve3([
+                    new THREE.Vector3(-6, 7, -7),
+                    new THREE.Vector3(0, 6, -5),
+                    new THREE.Vector3(6, 7, -7)
+                ]);
+                const wireGeo = new THREE.TubeGeometry(wireCurve, 20, 0.02, 8, false);
+                const wire = new THREE.Mesh(wireGeo, materials.metalBlack);
+                scene.add(wire);
+
+                for(let i=0; i<=1; i+=0.2) {
+                    const pos = wireCurve.getPoint(i);
+                    const bulbGroup = new THREE.Group();
+                    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1), materials.lightBulbOff);
+                    const light = new THREE.PointLight(0xffaa00, 0, 3);
+                    bulbGroup.add(bulb, light);
+                    bulbGroup.position.copy(pos);
+                    scene.add(bulbGroup);
+                }
+
+                // Dù che nắng
+                const umbrella = new THREE.Group();
+                const upole = createBox(0.1, 6, 0.1, materials.metalBlack, 0, 3, 0);
+                const top = new THREE.Mesh(new THREE.ConeGeometry(3, 1, 8), new THREE.MeshStandardMaterial({color: 0xffffff, side: THREE.DoubleSide}));
+                top.position.y = 5.5;
+                umbrella.add(upole, top);
+                umbrella.position.set(-3, 0, 5);
+                scene.add(umbrella);
+            }
+
+            function init() {
+                createMaterials();
+                createArchitecture();
+                createFurniture();
+                createDecorations();
+            }
+        `;
+
+        // --- EMBEDDED STORAGE UNIT ASSET CODE ---
+        const STORAGE_ASSET_CODE = `
+            const materials = {};
+
+            function createShojiTexture() {
+                const size = 256;
+                const canvas = document.createElement('canvas');
+                canvas.width = size; canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#fffff0'; ctx.fillRect(0,0,size,size);
+                for(let i=0; i<300; i++) {
+                    ctx.fillStyle = Math.random() > 0.5 ? '#f5f5dc' : '#ffffff';
+                    ctx.fillRect(Math.random()*size, Math.random()*size, 2, 2);
+                }
+                return new THREE.CanvasTexture(canvas);
+            }
+
+            function createWoodTexture() {
+                const size = 512;
+                const canvas = document.createElement('canvas');
+                canvas.width = size; canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#8d6e63'; ctx.fillRect(0,0,size,size);
+                ctx.strokeStyle = '#795548'; ctx.lineWidth = 1;
+                for(let i=0; i<40; i++) {
+                    ctx.beginPath(); ctx.moveTo(Math.random()*size, 0); ctx.lineTo(Math.random()*size, size); ctx.stroke();
+                }
+                return new THREE.CanvasTexture(canvas);
+            }
+
+            function createMaterials() {
+                const shojiTex = createShojiTexture();
+                const woodTex = createWoodTexture();
+
+                materials.woodFrame = new THREE.MeshStandardMaterial({ color: 0x5D4037, roughness: 0.4, map: woodTex });
+                materials.woodLight = new THREE.MeshStandardMaterial({ color: 0xD7CCC8, roughness: 0.5 });
+                materials.paper = new THREE.MeshStandardMaterial({ map: shojiTex, side: THREE.DoubleSide });
+                materials.metal = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.6, roughness: 0.3 });
+            }
+
+            function createBox(w, h, d, mat, x, y, z) {
+                const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+                mesh.position.set(x, y, z);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                return mesh;
+            }
+
+            function createStorageUnit() {
+                const group = new THREE.Group();
+
+                const cabinetW = 1.76;
+                const cabinetH = 5.0; // Đã cập nhật từ 2.40 lên 5.0
+                const cabinetD = 0.60;
+
+                // Frame
+                group.add(createBox(cabinetW, 0.05, cabinetD, materials.woodLight, 0, cabinetH * 0.4, -cabinetD/2));
+                group.add(createBox(cabinetW, 0.05, cabinetD, materials.woodLight, 0, cabinetH, -cabinetD/2));
+                group.add(createBox(cabinetW, 0.05, cabinetD, materials.woodLight, 0, 0, -cabinetD/2));
+                group.add(createBox(0.05, cabinetH, cabinetD, materials.woodLight, -cabinetW/2 + 0.025, cabinetH/2, -cabinetD/2));
+                group.add(createBox(0.05, cabinetH, cabinetD, materials.woodLight, cabinetW/2 - 0.025, cabinetH/2, -cabinetD/2));
+
+                // Tracks
+                const trackZ = 0;
+                group.add(createBox(cabinetW, 0.12, 0.15, materials.woodFrame, 0, cabinetH - 0.06, trackZ));
+                group.add(createBox(cabinetW, 0.10, 0.15, materials.woodFrame, 0, 0.05, trackZ));
+                group.add(createBox(0.10, cabinetH, 0.15, materials.woodFrame, -cabinetW/2 + 0.05, cabinetH/2, trackZ));
+                group.add(createBox(0.10, cabinetH, 0.15, materials.woodFrame, cabinetW/2 - 0.05, cabinetH/2, trackZ));
+
+                // Doors
+                const doorH = cabinetH - 0.2;
+                const doorW = cabinetW / 2 + 0.05;
+
+                function createDoor(width, height, x, z, isFront) {
+                    const dGroup = new THREE.Group();
+                    const fThick = 0.08;
+                    const fDepth = 0.04;
+
+                    dGroup.add(createBox(width, fThick, fDepth, materials.woodFrame, 0, height/2 - fThick/2, 0));
+                    dGroup.add(createBox(width, fThick, fDepth, materials.woodFrame, 0, -height/2 + fThick/2, 0));
+                    dGroup.add(createBox(fThick, height, fDepth, materials.woodFrame, -width/2 + fThick/2, 0, 0));
+                    dGroup.add(createBox(fThick, height, fDepth, materials.woodFrame, width/2 - fThick/2, 0, 0));
+                    dGroup.add(createBox(width - fThick, height - fThick, 0.01, materials.paper, 0, 0, 0));
+                    dGroup.add(createBox(0.1, 0.2, 0.06, materials.metal, isFront ? width/2 - 0.15 : -width/2 + 0.15, 0, 0));
+
+                    dGroup.position.set(x, height/2 + 0.05, z);
+                    return dGroup;
+                }
+
+                group.add(createDoor(doorW, doorH, -cabinetW/4, trackZ + 0.03, true));
+                group.add(createDoor(doorW, doorH, cabinetW/4, trackZ - 0.03, false));
+
+                scene.add(group);
+            }
+
+            function init() {
+                createMaterials();
+                createStorageUnit();
+            }
+        `;
+
+        // --- EMBEDDED BEDROOM ASSET CODE ---
+        const BEDROOM_ASSET_CODE = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng 3D Phòng Ngủ - White Wall Version</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #fce4e4; font-family: 'Segoe UI', sans-serif; }
+        canvas { display: block; }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 300px;
+            pointer-events: none;
+        }
+        h1 { margin: 0 0 10px 0; font-size: 18px; color: #333; }
+        p { margin: 5px 0; font-size: 14px; color: #666; }
+        .highlight { color: #e67e22; font-weight: bold; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"><\/script>
+</head>
+<body>
+
+    <div id="info">
+        <h1>Phòng Ngủ Isometric (V2)</h1>
+        <p>Màu tường: <span class="highlight">Trắng Sáng</span></p>
+        <p>Độ sáng: <span class="highlight">Đã cân bằng cho tường trắng</span></p>
+        <p>Hướng dẫn: Chuột trái xoay, chuột phải di chuyển.</p>
+    </div>
+
+    <script>
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xfce4e4);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(15, 12, 15); 
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // --- ĐIỀU CHỈNH ÁNH SÁNG CHO TƯỜNG TRẮNG ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); 
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.5); // Giảm cường độ một chút tránh lóa tường
+        dirLight.position.set(10, 15, 10);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.bias = -0.0001;
+        scene.add(dirLight);
+
+        // --- CHẤT LIỆU (WALL CẬP NHẬT SANG TRẮNG) ---
+        const matWall = new THREE.MeshStandardMaterial({ 
+            color: 0xfafafa, // Màu trắng hơi xám nhẹ để đổ bóng đẹp hơn
+            roughness: 0.7 
+        }); 
+        const matFloor = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.9 });
+        const matWood = new THREE.MeshStandardMaterial({ color: 0xD2B48C, roughness: 0.6 }); 
+        const matWhite = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.5 }); 
+        const matDarkWood = new THREE.MeshStandardMaterial({ color: 0x5D4037 });
+        const matLamp = new THREE.MeshStandardMaterial({ color: 0xFFFFE0, emissive: 0xFFFACD, emissiveIntensity: 0.2 });
+
+        function createBox(w, h, d, material, x, y, z, shadow = true) {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = shadow;
+            mesh.receiveShadow = true;
+            return mesh;
+        }
+
+        const roomGroup = new THREE.Group();
+        scene.add(roomGroup);
+
+        // Sàn
+        roomGroup.add(createBox(10.5, 0.2, 10.5, matFloor, 0, -0.1, 0, false));
+
+        // Tường Trắng
+        roomGroup.add(createBox(10.5, 6, 0.2, matWall, 0, 3, -5.15)); 
+        roomGroup.add(createBox(0.2, 6, 10.5, matWall, -5.15, 3, 0));
+
+        // --- GIƯỜNG NGỦ ---
+        const bedGroup = new THREE.Group();
+        bedGroup.add(createBox(4.5, 0.6, 6, matWood, 0, 0.3, 0)); 
+        bedGroup.add(createBox(4.5, 2.2, 0.2, matWood, 0, 1.1, -2.9)); 
+        bedGroup.add(createBox(4.2, 0.6, 5.8, matWhite, 0, 0.85, 0)); 
+        bedGroup.add(createBox(1.6, 0.4, 1.1, matWhite, -1, 1.2, -2.2)); 
+        bedGroup.add(createBox(1.6, 0.4, 1.1, matWhite, 1, 1.2, -2.2)); 
+        bedGroup.add(createBox(4.3, 0.5, 3.5, matWhite, 0, 0.95, 1.2)); 
+        bedGroup.position.set(-1.8, 0, -1.8); 
+        roomGroup.add(bedGroup);
+
+        // --- TỦ ĐẦU GIƯỜNG ---
+        function addNightstand(x, z) {
+            const g = new THREE.Group();
+            g.add(createBox(1.4, 1.2, 1.4, matWood, 0, 0.6, 0));
+            const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 0.4), matWhite);
+            lampBase.position.y = 1.4;
+            const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.5, 0.7, 16), matLamp);
+            shade.position.y = 1.9;
+            g.add(lampBase, shade);
+            g.position.set(x, 0, z);
+            roomGroup.add(g);
+        }
+        addNightstand(-4.3, -4.2); 
+        addNightstand(0.7, -4.2);  
+
+        // --- KỆ SÁCH ---
+        const shelfGroup = new THREE.Group();
+        const sW = 2.4, sH = 4.5, sD = 1.0;
+        shelfGroup.add(createBox(sW, sH, 0.1, matWood, 0, sH/2, -sD/2)); 
+        shelfGroup.add(createBox(0.1, sH, sD, matWood, -sW/2, sH/2, 0)); 
+        shelfGroup.add(createBox(0.1, sH, sD, matWood, sW/2, sH/2, 0)); 
+        for(let i=1; i<=3; i++) shelfGroup.add(createBox(sW, 0.1, sD, matWood, 0, i*1.2, 0)); 
+        shelfGroup.position.set(3.8, 0, -4.5); 
+        roomGroup.add(shelfGroup);
+
+        // --- GHẾ ---
+        const chairGroup = new THREE.Group();
+        chairGroup.add(createBox(1.2, 0.2, 1.2, matWhite, 0, 1.2, 0)); 
+        const back = createBox(1.2, 1.4, 0.15, matWhite, 0, 1.9, -0.5);
+        back.rotation.x = -0.15;
+        chairGroup.add(back);
+        const legs = [[-0.45,-0.45],[0.45,-0.45],[-0.45,0.45],[0.45,0.45]];
+        legs.forEach(l => {
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 1.2), matWood);
+            leg.position.set(l[0], 0.6, l[1]);
+            chairGroup.add(leg);
+        });
+        chairGroup.position.set(1.5, 0, -2.5);
+        chairGroup.rotation.y = Math.PI - 0.4;
+        roomGroup.add(chairGroup);
+
+        // Tranh (với viền gỗ nổi bật trên nền trắng)
+        roomGroup.add(createBox(3.5, 2, 0.1, matDarkWood, -1.5, 4, -5.02));
+        roomGroup.add(createBox(3.2, 1.7, 0.05, matWhite, -1.5, 4, -4.96));
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        animate();
+    <\/script>
+</body>
+</html>`;
+
+        // --- EMBEDDED BATHROOM ASSET CODE ---
+        const BATHROOM_ASSET_CODE = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phòng Tắm Isometric - V5 Interactive</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #dcbfa6; font-family: 'Segoe UI', sans-serif; }
+        canvas { display: block; outline: none; cursor: default; }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(93, 64, 55, 0.15);
+            max-width: 340px;
+            pointer-events: none;
+            user-select: none;
+            font-size: 14px;
+            color: #5d4037;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        h1 { margin: 0 0 12px 0; font-size: 20px; color: #3e2723; font-weight: 700; }
+        p { margin: 8px 0; color: #6d4c41; display: flex; align-items: center; }
+        .icon { margin-right: 10px; font-size: 18px; }
+        .tag { background: #e0f2f1; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: #00695c; margin-left: auto; }
+        .instruction { font-size: 13px; color: #d84315; font-style: italic; margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 10px; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"><\/script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"><\/script>
+</head>
+<body>
+
+    <div id="info">
+        <h1>Phòng Tắm Luxury V5</h1>
+        <p><span class="icon">🖱️</span> Click để tương tác <span class="tag">New</span></p>
+        <p><span class="icon">🚽</span> Nút xả -> Mở nắp bồn cầu</p>
+        <p><span class="icon">🚪</span> Cánh tủ -> Đóng/Mở cửa</p>
+        <p><span class="icon">🚰</span> Vòi nước -> Xả nước</p>
+        <p class="instruction">Đã fix lỗi chồng lấn ảnh và vị trí kệ giấy!</p>
+    </div>
+
+    <script>
+        // --- 1. SETUP ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xdcbfa6); 
+
+        const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(19, 19, 19); 
+        camera.lookAt(0, 1.5, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.1;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05;
+        controls.target.set(0, 2, 0);
+
+        // --- 2. LIGHTING ---
+        const ambientLight = new THREE.AmbientLight(0xfff5e6, 0.7); 
+        scene.add(ambientLight);
+
+        const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        mainLight.position.set(8, 12, 10);
+        mainLight.castShadow = true;
+        mainLight.shadow.mapSize.set(2048, 2048);
+        mainLight.shadow.bias = -0.0001;
+        mainLight.shadow.normalBias = 0.02; 
+        const d = 10;
+        mainLight.shadow.camera.left = -d; mainLight.shadow.camera.right = d;
+        mainLight.shadow.camera.top = d; mainLight.shadow.camera.bottom = -d;
+        scene.add(mainLight);
+
+        const fillLight = new THREE.DirectionalLight(0xffe0b2, 0.4);
+        fillLight.position.set(-8, 6, -5);
+        scene.add(fillLight);
+
+        // --- 3. MATERIALS ---
+        const mat = {
+            wall: new THREE.MeshStandardMaterial({ color: 0xFFF8F3, roughness: 0.9 }),
+            floor: new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.6 }),
+            woodOak: new THREE.MeshStandardMaterial({ color: 0xC69C6D, roughness: 0.5 }),
+            woodDark: new THREE.MeshStandardMaterial({ color: 0x8D6E63, roughness: 0.6 }), 
+            ceramic: new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.2, metalness: 0.1 }),
+            marble: new THREE.MeshStandardMaterial({ color: 0xF5F5F5, roughness: 0.3 }),
+            gold: new THREE.MeshStandardMaterial({ color: 0xFDD835, roughness: 0.2, metalness: 0.8 }),
+            glass: new THREE.MeshPhysicalMaterial({ 
+                color: 0xFFFFFF, transmission: 0.9, opacity: 1, transparent: true, roughness: 0, metalness: 0, clearcoat: 1 
+            }),
+            plant: new THREE.MeshStandardMaterial({ color: 0x558B2F, roughness: 0.8 }),
+            pot: new THREE.MeshStandardMaterial({ color: 0xD87959, roughness: 1.0 }),
+            rug: new THREE.MeshStandardMaterial({ color: 0xFFF3E0, roughness: 1.0 }),
+            towel1: new THREE.MeshStandardMaterial({ color: 0x81D4FA, roughness: 0.9 }),
+            towel2: new THREE.MeshStandardMaterial({ color: 0xFFCC80, roughness: 0.9 }),
+            water: new THREE.MeshPhysicalMaterial({ 
+                color: 0x4FC3F7, transmission: 0.8, opacity: 0.8, transparent: true, roughness: 0, metalness: 0.1 
+            })
+        };
+
+        // Mirror
+        const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, { 
+            format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter 
+        });
+        const mirrorCamera = new THREE.CubeCamera(0.1, 100, cubeRenderTarget);
+        scene.add(mirrorCamera);
+        const mirrorMaterial = new THREE.MeshBasicMaterial({ 
+            envMap: cubeRenderTarget.texture, combine: THREE.MultiplyOperation, reflectivity: 1.0 
+        });
+
+        // Helpers
+        function createBox(w, h, d, material, x, y, z, shadow=true) {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = shadow;
+            mesh.receiveShadow = true;
+            return mesh;
+        }
+        function createCylinder(rt, rb, h, material, x, y, z, shadow=true) {
+            const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, 32), material);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = shadow;
+            mesh.receiveShadow = true;
+            return mesh;
+        }
+
+        // --- INTERACTION LIST ---
+        const interactables = [];
+
+        // --- 5. SCENE CONSTRUCTION ---
+        const roomGroup = new THREE.Group();
+        scene.add(roomGroup);
+
+        const WALL_Z_SURFACE = -5.8;
+        const WALL_X_SURFACE = -5.8;
+
+        // 5.1. Floor & Walls
+        for(let x = -6; x < 6; x += 0.8) {
+            roomGroup.add(createBox(0.78, 0.2, 12, mat.floor, x + 0.4, -0.1, 0, false));
+        }
+        roomGroup.add(createBox(12, 8, 0.4, mat.wall, 0, 4, -6));
+        roomGroup.add(createBox(0.4, 8, 12, mat.wall, -6, 4, 0));
+        roomGroup.add(createBox(12, 0.25, 0.05, mat.floor, 0, 0.125, WALL_Z_SURFACE + 0.025));
+        roomGroup.add(createBox(0.05, 0.25, 12, mat.floor, WALL_X_SURFACE + 0.025, 0.125, 0));
+
+        // 5.3. TỦ LAVABO & CỬA TƯƠNG TÁC
+        const vGroup = new THREE.Group();
+        const vanityZ = WALL_Z_SURFACE + 1; 
+        
+        vGroup.add(createBox(4, 2.5, 2, mat.woodOak, 0, 1.25, 0)); // Body
+        vGroup.add(createBox(4.2, 0.2, 2.2, mat.marble, 0, 2.6, 0)); // Top
+        
+        // Cánh tủ trái (Interactive)
+        const doorLGroup = new THREE.Group();
+        const doorLMesh = createBox(1.8, 1.4, 0.05, mat.woodOak, 0.9, 0, 0); // Mesh lệch tâm
+        const handleL = createCylinder(0.03, 0.03, 0.4, mat.gold, 1.6, 0.1, 0.05);
+        doorLGroup.add(doorLMesh, handleL);
+        doorLGroup.position.set(-1.9, 0.9, 1.025); // Đặt tại bản lề trái
+        vGroup.add(doorLGroup);
+        // Add to interactive
+        doorLMesh.userData = { type: 'door', parent: doorLGroup, state: 'closed', dir: -1 };
+        interactables.push(doorLMesh);
+
+        // Cánh tủ phải (Interactive)
+        const doorRGroup = new THREE.Group();
+        const doorRMesh = createBox(1.8, 1.4, 0.05, mat.woodOak, -0.9, 0, 0); // Mesh lệch tâm
+        const handleR = createCylinder(0.03, 0.03, 0.4, mat.gold, -1.6, 0.1, 0.05);
+        doorRGroup.add(doorRMesh, handleR);
+        doorRGroup.position.set(1.9, 0.9, 1.025); // Đặt tại bản lề phải
+        vGroup.add(doorRGroup);
+        // Add to interactive
+        doorRMesh.userData = { type: 'door', parent: doorRGroup, state: 'closed', dir: 1 };
+        interactables.push(doorRMesh);
+
+        // Ngăn kéo giả
+        const dL = createBox(1.8, 0.5, 0.05, new THREE.MeshStandardMaterial({color: 0xE0C090}), -1, 2, 1.025);
+        const dR = createBox(1.8, 0.5, 0.05, new THREE.MeshStandardMaterial({color: 0xE0C090}), 1, 2, 1.025);
+        vGroup.add(dL, dR);
+
+        // Sink & Faucet (Interactive)
+        const sink = new THREE.Mesh(new THREE.CylinderGeometry(1, 0.7, 0.35, 64), mat.ceramic);
+        sink.scale.set(1.3, 1, 1); sink.position.set(0, 2.75, 0);
+        
+        const fBase = createCylinder(0.1, 0.12, 0.15, mat.gold, 0, 2.75, -0.6);
+        const fBody = createBox(0.1, 0.3, 0.1, mat.gold, 0, 2.9, -0.6);
+        const fSpout = createBox(0.08, 0.08, 0.6, mat.gold, 0, 3.0, -0.35);
+        
+        // Water Stream (Hidden by default)
+        const waterGeo = new THREE.CylinderGeometry(0.02, 0.05, 0); // Start height 0
+        waterGeo.translate(0, -0.5, 0); // Pivot at top
+        const waterStream = new THREE.Mesh(waterGeo, mat.water);
+        waterStream.position.set(0, 3.0, -0.05);
+        waterStream.visible = false;
+        vGroup.add(waterStream);
+        
+        // Faucet Handle (Trigger)
+        const fHandle = createBox(0.04, 0.3, 0.04, mat.gold, 0.3, 2.95, -0.6); 
+        fHandle.rotation.x = 0.5;
+        fHandle.userData = { type: 'faucet', water: waterStream, state: 'off' };
+        interactables.push(fHandle);
+        // Also make spout interactive for easier clicking
+        fSpout.userData = { type: 'faucet', water: waterStream, state: 'off' };
+        interactables.push(fSpout);
+
+        vGroup.add(sink, fBase, fBody, fSpout, fHandle);
+        vGroup.position.set(3, 0, vanityZ);
+        roomGroup.add(vGroup);
+
+        // 5.4. Vách & Gương
+        const slatGroup = new THREE.Group();
+        const slatZPos = WALL_Z_SURFACE + 0.025;
+        for(let i=0; i<14; i++) {
+            roomGroup.add(createBox(0.15, 3.5, 0.05, mat.woodDark, (i-7)*0.27 + 3, 4.5, slatZPos));
+        }
+        roomGroup.add(createBox(3.8, 0.08, 0.6, mat.woodOak, 3, 3, slatZPos + 0.3)); // Shelf
+
+        // Gương
+        const mShape = new THREE.Shape();
+        mShape.moveTo(-1.4, -1.2); mShape.lineTo(1.4, -1.2); mShape.lineTo(1.4, 0);
+        mShape.absarc(0, 0, 1.4, 0, Math.PI, false); mShape.lineTo(-1.4, -1.2);
+        const mFrame = new THREE.Mesh(new THREE.ExtrudeGeometry(mShape, {depth:0.1, bevelEnabled:false}), mat.woodOak);
+        mFrame.position.set(3, 4.6, slatZPos + 0.05);
+        const mFace = new THREE.Mesh(new THREE.ExtrudeGeometry(mShape, {depth:0.01, bevelEnabled:false}), mirrorMaterial);
+        mFace.position.set(3, 4.6, slatZPos + 0.15);
+        roomGroup.add(mFrame, mFace);
+        mirrorCamera.position.set(3, 4.6, slatZPos + 0.2); mirrorCamera.lookAt(3, 4.6, 10);
+
+        // 5.5. TOILET (Interactive Lid)
+        const tGroup = new THREE.Group();
+        const toiletZ = -4.9;
+        tGroup.add(createCylinder(0.6, 0.75, 0.5, mat.ceramic, 0, 0.25, 0)); // Base
+        const tBowl = new THREE.Mesh(new THREE.SphereGeometry(0.7, 32, 16, 0, Math.PI*2, 0, Math.PI/2), mat.ceramic);
+        tBowl.scale.set(1, 0.7, 1.2); tBowl.rotation.x = Math.PI; tBowl.position.set(0, 0.6, 0.2);
+        tGroup.add(tBowl);
+
+        // Nắp bồn cầu (Lid Group for rotation)
+        const lidGroup = new THREE.Group();
+        lidGroup.position.set(0, 1.0, -0.4); // Hinge position (back of seat)
+        
+        const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.72, 0.05, 32), mat.woodOak);
+        seat.scale.set(1, 1, 1.25); seat.position.set(0, 0, 0.6); // Offset relative to hinge
+        
+        // Nắp trên (Cover)
+        const cover = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.72, 0.05, 32), mat.woodOak);
+        cover.scale.set(1, 1, 1.25); cover.position.set(0, 0.05, 0.6);
+        
+        lidGroup.add(seat, cover);
+        tGroup.add(lidGroup);
+
+        const tTank = createBox(1.5, 0.9, 0.6, mat.ceramic, 0, 1.6, -0.6);
+        const tTankLid = createBox(1.6, 0.08, 0.7, mat.woodOak, 0, 2.1, -0.6);
+        // Nút xả (Interactive)
+        const tFlush = createCylinder(0.06, 0.06, 0.15, mat.gold, 0.5, 2.15, -0.6);
+        tFlush.userData = { type: 'flush', lid: lidGroup, state: 'closed' };
+        interactables.push(tFlush);
+        // Make lid interactive too
+        cover.userData = { type: 'flush', lid: lidGroup, state: 'closed' };
+        interactables.push(cover);
+
+        tGroup.add(tTank, tTankLid, tFlush);
+        tGroup.position.set(-1, 0, toiletZ);
+        roomGroup.add(tGroup);
+
+        // Fix Giấy vệ sinh: Di dời ra vị trí hợp lý (X=1.5)
+        const tpGroup = new THREE.Group();
+        tpGroup.add(createCylinder(0.04, 0.04, 0.2, mat.gold, 0, 0, 0).rotateZ(Math.PI/2));
+        tpGroup.add(createCylinder(0.25, 0.25, 0.3, mat.ceramic, 0, 0, 0).rotateZ(Math.PI/2));
+        tpGroup.position.set(1.5, 1.2, WALL_Z_SURFACE + 0.2); // Gắn tường sau, lệch phải toilet
+        roomGroup.add(tpGroup);
+
+        // 5.6. Tủ treo & Kệ & Tranh
+        // Tủ treo (Left Wall)
+        const cabGroup = new THREE.Group();
+        cabGroup.add(createBox(2.4, 2.2, 0.8, mat.woodOak, 0, 0, 0));
+        cabGroup.add(createBox(1, 2, 0.02, mat.glass, -0.55, 0, 0.42));
+        cabGroup.add(createBox(1, 2, 0.02, mat.glass, 0.55, 0, 0.42));
+        cabGroup.add(createCylinder(0.02, 0.02, 0.3, mat.gold, -0.1, 0, 0.45));
+        cabGroup.add(createCylinder(0.02, 0.02, 0.3, mat.gold, 0.1, 0, 0.45));
+        cabGroup.add(createBox(0.4, 0.5, 0.4, mat.towel1, -0.6, 0.5, 0));
+        cabGroup.position.set(WALL_X_SURFACE + 0.4, 4.2, -2);
+        cabGroup.rotation.y = Math.PI/2;
+        roomGroup.add(cabGroup);
+
+        // Kệ khăn (Left Wall)
+        const rackGroup = new THREE.Group();
+        rackGroup.add(createBox(0.2, 2.5, 1.8, mat.woodOak, 0, 0, 0));
+        rackGroup.add(createBox(0.8, 0.04, 1.6, mat.glass, 0.4, 0.8, 0));
+        rackGroup.add(createBox(0.8, 0.04, 1.6, mat.glass, 0.4, 0, 0));
+        rackGroup.add(createCylinder(0.03, 0.03, 1.6, mat.gold, 0.6, -0.8, 0).rotateX(Math.PI/2));
+        rackGroup.add(createBox(0.6, 0.1, 0.6, mat.towel2, 0.4, 0.1, -0.4));
+        rackGroup.add(createBox(0.1, 1.2, 0.8, mat.towel2, 0.6, -1.4, 0));
+        rackGroup.position.set(WALL_X_SURFACE + 0.1, 3.5, -5);
+        rackGroup.rotation.y = Math.PI/2;
+        roomGroup.add(rackGroup);
+
+        // Fix Tranh: Di dời tranh tường trái ra Z = -4.5 để không bị Tủ treo (Z=-2) che
+        function createArt(w, h, x, y, z, color, rotY=0) {
+            const grp = new THREE.Group();
+            grp.add(createBox(w, h, 0.05, mat.woodOak, 0, 0, 0));
+            grp.add(createBox(w-0.15, h-0.15, 0.06, new THREE.MeshBasicMaterial({color:0xffffff}), 0, 0, 0.01));
+            grp.add(createBox(w-0.4, h-0.4, 0.07, new THREE.MeshBasicMaterial({color:color}), 0, 0, 0.01));
+            grp.position.set(x, y, z); grp.rotation.y = rotY;
+            return grp;
+        }
+        roomGroup.add(createArt(1.4, 1.8, -2, 5, WALL_Z_SURFACE + 0.03, 0xE6CEAC));
+        // Moved from Z=-2 to Z=-4.5
+        roomGroup.add(createArt(1.4, 1.4, WALL_X_SURFACE + 0.03, 5, -4.5, 0xB0C4DE, Math.PI/2)); 
+
+        // 5.7. Decor
+        const pGroup = new THREE.Group();
+        pGroup.add(createCylinder(0.5, 0.4, 0.5, mat.pot, 0, 0.25, 0));
+        pGroup.add(createCylinder(0.35, 0.35, 0.05, mat.woodDark, 0, 0.5, 0));
+        for(let i=0; i<7; i++) {
+            const h = 1.2 + Math.random()*0.5;
+            const l = new THREE.Mesh(new THREE.BoxGeometry(0.08, h, 0.25), mat.plant);
+            l.position.set(Math.sin(i)*0.15, 0.5 + h/2, Math.cos(i)*0.15);
+            l.rotation.y = i; l.scale.set(1, 1, 1 - h/4); pGroup.add(l);
+        }
+        pGroup.position.set(-5, 0, 2);
+        roomGroup.add(pGroup);
+
+        const rug = new THREE.Group();
+        rug.add(createBox(1.6, 0.03, 2.8, mat.rug, 0, 0, 0, false));
+        const c1 = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.03, 32), mat.rug); c1.position.z = -1.4;
+        const c2 = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.03, 32), mat.rug); c2.position.z = 1.4;
+        rug.add(c1, c2);
+        rug.position.set(-1, 0.02, 0.5); rug.rotation.y = Math.PI/2;
+        roomGroup.add(rug);
+
+        // --- 6. RAYCASTER LOGIC ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener('click', (event) => {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(interactables);
+            if (intersects.length > 0) {
+                const obj = intersects[0].object;
+                
+                // Logic Cửa Tủ
+                if (obj.userData.type === 'door') {
+                    const target = obj.userData.parent;
+                    const dir = obj.userData.dir; // -1 for left, 1 for right
+                    const targetRot = obj.userData.state === 'closed' ? dir * Math.PI / 1.5 : 0;
+                    
+                    new TWEEN.Tween(target.rotation)
+                        .to({ y: targetRot }, 1000)
+                        .easing(TWEEN.Easing.Quadratic.Out)
+                        .start();
+                    
+                    obj.userData.state = obj.userData.state === 'closed' ? 'open' : 'closed';
+                }
+
+                // Logic Nắp Bồn Cầu
+                if (obj.userData.type === 'flush') {
+                    const lid = obj.userData.lid;
+                    const targetRot = obj.userData.state === 'closed' ? -Math.PI / 1.8 : 0;
+                    
+                    new TWEEN.Tween(lid.rotation)
+                        .to({ x: targetRot }, 1000)
+                        .easing(TWEEN.Easing.Bounce.Out)
+                        .start();
+                    
+                    obj.userData.state = obj.userData.state === 'closed' ? 'open' : 'closed';
+                }
+
+                // Logic Vòi Nước
+                if (obj.userData.type === 'faucet') {
+                    const water = obj.userData.water;
+                    if (obj.userData.state === 'off') {
+                        water.visible = true;
+                        new TWEEN.Tween(water.scale).to({ y: 1 }, 200).start(); // Grow
+                        new TWEEN.Tween(water.geometry.parameters).to({ height: 1.5 }, 200).onUpdate(() => {
+                            // ThreeJS geom update trick usually needs rebuild, use Scale instead
+                            water.scale.set(1, 40, 1); // Scale Y up
+                            water.position.y = 3.0 - (40 * 0.02); // Adjust pos to look like falling
+                            // Actually better simpler approach:
+                            water.scale.y = 1;
+                        }).start();
+                        
+                        // Simple animation simulation via scale
+                        water.scale.set(1, 1, 1);
+                        new TWEEN.Tween(water.scale).to({ y: 30 }, 300).easing(TWEEN.Easing.Quadratic.Out).start();
+                        new TWEEN.Tween(water.position).to({ y: 3.0 - 0.75 }, 300).start();
+
+                        obj.userData.state = 'on';
+                    } else {
+                        new TWEEN.Tween(water.scale).to({ y: 0.1 }, 200).start();
+                        new TWEEN.Tween(water.position).to({ y: 3.0 }, 200).onComplete(() => {
+                            water.visible = false;
+                        }).start();
+                        obj.userData.state = 'off';
+                    }
+                }
+            }
+        });
+
+        // --- ANIMATION ---
+        function animate(time) {
+            requestAnimationFrame(animate);
+            TWEEN.update(time);
+            controls.update();
+            mFace.visible = false;
+            mirrorCamera.update(renderer, scene);
+            mFace.visible = true;
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+
+    <\/script>
+</body>
+</html>`;
+
+        // --- EMBEDDED ENTRANCE ASSET CODE ---
+        const ENTRANCE_ASSET_CODE = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lối Vào Phong Cách Nhật Bản 3D - Thu Gọn</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #f0f4f8; font-family: 'Segoe UI', sans-serif; }
+        canvas { display: block; outline: none; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-width: 320px;
+            pointer-events: none;
+            user-select: none;
+            color: #4a4a4a;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.8);
+        }
+        h1 { margin: 0 0 12px 0; font-size: 24px; font-weight: 700; color: #5d4037; letter-spacing: -0.5px; }
+        p { margin: 10px 0; font-size: 15px; display: flex; align-items: center; color: #666; }
+        .icon { margin-right: 12px; font-size: 20px; width: 28px; text-align: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 20px; color: #5d4037; font-weight: bold; pointer-events: none;
+            transition: opacity 0.5s;
+            background: rgba(255,255,255,0.8);
+            padding: 20px 40px;
+            border-radius: 50px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+    </style>
+    <!-- Three.js Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"><\/script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"><\/script>
+</head>
+<body>
+
+    <div id="loading">Đang cập nhật không gian Zen...</div>
+    <div id="info">
+        <h1>Genkan Nhật Bản (Compact)</h1>
+        <p><span class="icon">🚪</span> <b>Click vào cửa</b> để mở/đóng</p>
+        <p><span class="icon">⛩️</span> Tường bên cửa thu hẹp 20%</p>
+        <p><span class="icon">🎋</span> Bonsai & Đèn lồng</p>
+        <p><span class="icon">🖱️</span> Kéo thả để xem 360°</p>
+    </div>
+
+    <script>
+        window.addEventListener('load', init);
+
+        // --- BỘ TẠO TEXTURE ---
+        function createWoodTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#cfaa7d';
+            ctx.fillRect(0,0,512,512);
+            ctx.globalAlpha = 0.15;
+            for(let i=0; i<150; i++) {
+                ctx.beginPath();
+                ctx.moveTo(Math.random()*512, 0);
+                ctx.bezierCurveTo(Math.random()*512, 170, Math.random()*512, 340, Math.random()*512, 512);
+                ctx.lineWidth = Math.random() * 4 + 1;
+                ctx.strokeStyle = '#5d4037';
+                ctx.stroke();
+            }
+            ctx.globalAlpha = 0.05;
+            for(let i=0; i<5000; i++) {
+                ctx.fillStyle = Math.random() > 0.5 ? '#fff' : '#000';
+                ctx.fillRect(Math.random()*512, Math.random()*512, 2, 2);
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }
+
+        function createPaperTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fffff5'; 
+            ctx.fillRect(0,0,256,256);
+            ctx.globalAlpha = 0.08;
+            ctx.fillStyle = '#dcdcdc';
+            for(let i=0; i<1000; i++) {
+                ctx.beginPath();
+                ctx.arc(Math.random()*256, Math.random()*256, Math.random()*2, 0, Math.PI*2);
+                ctx.fill();
+            }
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function init() {
+            // --- 1. THIẾT LẬP BAN ĐẦU ---
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf4f7f6); 
+            scene.fog = new THREE.Fog(0xf4f7f6, 5, 20);
+
+            const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(7, 5, 8); 
+            camera.lookAt(0, 1.2, 0);
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.1;
+            document.body.appendChild(renderer.domElement);
+
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05;
+            controls.minDistance = 2;
+            controls.maxDistance = 12;
+            controls.target.set(0, 1.2, 0);
+
+            // --- 2. ÁNH SÁNG ---
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffeec2, 0.6);
+            scene.add(hemiLight);
+
+            const sunLight = new THREE.DirectionalLight(0xfff5e6, 1.0);
+            sunLight.position.set(-5, 10, 5);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.set(1024, 1024);
+            sunLight.shadow.bias = -0.0001;
+            scene.add(sunLight);
+
+            const lanternLight = new THREE.PointLight(0xffaa33, 0.8, 6);
+            lanternLight.position.set(0, 3.5, 0); 
+            lanternLight.castShadow = true;
+            scene.add(lanternLight);
+
+            // --- 3. VẬT LIỆU ---
+            const woodTex = createWoodTexture();
+            const paperTex = createPaperTexture();
+
+            const mat = {
+                wall: new THREE.MeshStandardMaterial({ color: 0xf2ebe5, roughness: 0.9 }),
+                tataki: new THREE.MeshStandardMaterial({ color: 0x606060, roughness: 0.8 }),
+                woodFloor: new THREE.MeshStandardMaterial({ map: woodTex, color: 0xffddaa, roughness: 0.5 }),
+                wood: new THREE.MeshStandardMaterial({ map: woodTex, color: 0xcc9966, roughness: 0.6 }),
+                woodDark: new THREE.MeshStandardMaterial({ color: 0x4a3b32, roughness: 0.7 }),
+                shojiPaper: new THREE.MeshStandardMaterial({ map: paperTex, transparent: true, opacity: 0.92, side: THREE.DoubleSide, emissive: 0xffffff, emissiveIntensity: 0.1 }),
+                stone: new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.9 }),
+                bonsaiPot: new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.6 }),
+                bonsaiLeaf: new THREE.MeshStandardMaterial({ color: 0x4caf50, roughness: 0.8 })
+            };
+
+            // --- 4. CÔNG CỤ TẠO HÌNH ---
+            function createBox(w, h, d, mat, x, y, z, castShadow=true, receiveShadow=true) {
+                const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+                mesh.position.set(x, y, z);
+                mesh.castShadow = castShadow;
+                mesh.receiveShadow = receiveShadow;
+                return mesh;
+            }
+
+            // --- 5. XÂY DỰNG KHÔNG GIAN ---
+            const roomGroup = new THREE.Group();
+            scene.add(roomGroup);
+
+            // Kích thước thu gọn
+            const ROOM_WIDTH = 7.0; 
+            const TOTAL_DEPTH = 3.0; 
+            const WALL_H = 5.0; 
+            const WALL_THICK = 0.4;
+            const GENKAN_DEPTH = 1.8; 
+            const DOOR_W = 3.8; 
+            const DOOR_H = 4.0;
+            const woodFloorDepth = TOTAL_DEPTH - GENKAN_DEPTH;
+
+            // --- CẬP NHẬT SÀN & MÓNG (YÊU CẦU MỚI) ---
+            // 1. Móng sàn (Foundation Base) dày từ y=-0.2 đến 0.2
+            roomGroup.add(createBox(ROOM_WIDTH, 0.4, TOTAL_DEPTH, mat.wall, 0, 0, (GENKAN_DEPTH - woodFloorDepth)/2));
+
+            // 2. Sàn Tataki (Genkan) - Đặt lên trên móng (y=0.2 + 0.05)
+            roomGroup.add(createBox(ROOM_WIDTH, 0.1, GENKAN_DEPTH, mat.tataki, 0, 0.25, GENKAN_DEPTH/2));
+            
+            // 3. Bậc tam cấp gỗ
+            roomGroup.add(createBox(ROOM_WIDTH, 0.3, 0.3, mat.wood, 0, 0.35, 0.15)); 
+            
+            // 4. Sàn gỗ chính - Nâng lên y=0.25 (mặt trên y=0.3)
+            const woodFloor = createBox(ROOM_WIDTH, 0.1, woodFloorDepth, mat.woodFloor, 0, 0.25, -woodFloorDepth/2 + 0.15);
+            woodFloor.material.map.repeat.set(1.5, 1.5);
+            roomGroup.add(woodFloor);
+
+            // Đá bước
+            for(let i=0; i<2; i++) {
+                const stone = createBox(0.7, 0.06, 0.4, mat.stone, (i-0.5)*1.2, 0.28, 1.2 - i*0.4); // Adjusted height
+                stone.rotation.y = (Math.random()-0.5)*0.3;
+                roomGroup.add(stone);
+            }
+
+            // TƯỜNG
+            const BACK_WALL_Z = -woodFloorDepth + 0.15 - WALL_THICK/2;
+            const FRONT_WALL_Z = GENKAN_DEPTH + WALL_THICK/2;
+            const LEFT_WALL_X = -ROOM_WIDTH/2 - WALL_THICK/2;
+            const RIGHT_WALL_X = ROOM_WIDTH/2 + WALL_THICK/2;
+
+            roomGroup.add(createBox(WALL_THICK, WALL_H, TOTAL_DEPTH + WALL_THICK*2, mat.wall, LEFT_WALL_X, WALL_H/2 + 0.2, (GENKAN_DEPTH - woodFloorDepth)/2));
+            roomGroup.add(createBox(WALL_THICK, WALL_H, TOTAL_DEPTH + WALL_THICK*2, mat.wall, RIGHT_WALL_X, WALL_H/2 + 0.2, (GENKAN_DEPTH - woodFloorDepth)/2));
+
+            // Tường trước có lỗ cửa
+            roomGroup.add(createBox((ROOM_WIDTH - DOOR_W)/2, WALL_H, WALL_THICK, mat.wall, -ROOM_WIDTH/2 + (ROOM_WIDTH - DOOR_W)/4, WALL_H/2 + 0.2, FRONT_WALL_Z)); 
+            roomGroup.add(createBox((ROOM_WIDTH - DOOR_W)/2, WALL_H, WALL_THICK, mat.wall, ROOM_WIDTH/2 - (ROOM_WIDTH - DOOR_W)/4, WALL_H/2 + 0.2, FRONT_WALL_Z)); 
+            roomGroup.add(createBox(DOOR_W, WALL_H - DOOR_H, WALL_THICK, mat.wall, 0, DOOR_H + (WALL_H - DOOR_H)/2 + 0.2, FRONT_WALL_Z)); 
+
+            // Tường sau
+            roomGroup.add(createBox((ROOM_WIDTH - DOOR_W)/2, WALL_H, WALL_THICK, mat.wall, -ROOM_WIDTH/2 + (ROOM_WIDTH - DOOR_W)/4, WALL_H/2 + 0.2, BACK_WALL_Z)); 
+            roomGroup.add(createBox((ROOM_WIDTH - DOOR_W)/2, WALL_H, WALL_THICK, mat.wall, ROOM_WIDTH/2 - (ROOM_WIDTH - DOOR_W)/4, WALL_H/2 + 0.2, BACK_WALL_Z)); 
+            roomGroup.add(createBox(DOOR_W, WALL_H - DOOR_H, WALL_THICK, mat.wall, 0, DOOR_H + (WALL_H - DOOR_H)/2 + 0.2, BACK_WALL_Z)); 
+
+            // CỬA SHOJI
+            function createShojiPanel(w, h, thick, handleSide) {
+                const group = new THREE.Group();
+                const frameW = 0.12;
+                group.add(createBox(frameW, h, thick, mat.wood, -w/2 + frameW/2, 0, 0)); 
+                group.add(createBox(frameW, h, thick, mat.wood, w/2 - frameW/2, 0, 0)); 
+                group.add(createBox(w, frameW, thick, mat.wood, 0, h/2 - frameW/2, 0)); 
+                group.add(createBox(w, frameW, thick, mat.wood, 0, -h/2 + frameW/2, 0)); 
+                
+                const gridX = 3; // Tăng lưới Kumiko vì cửa rộng hơn
+                const gridY = 4; 
+                const innerW = w - frameW*2;
+                const innerH = h - frameW*2;
+                const barThick = 0.03;
+                
+                for(let i=1; i<gridY; i++) {
+                    group.add(createBox(innerW, barThick, thick*0.8, mat.wood, 0, -innerH/2 + i*(innerH/gridY), 0));
+                }
+                for(let i=1; i<gridX; i++) {
+                    group.add(createBox(barThick, innerH, thick*0.8, mat.wood, -innerW/2 + i*(innerW/gridX), 0, 0));
+                }
+                group.add(createBox(innerW, innerH, 0.01, mat.shojiPaper, 0, 0, 0));
+                const handleX = handleSide === 'left' ? -w/2 + frameW/2 : w/2 - frameW/2;
+                group.add(createBox(0.08, 0.25, thick + 0.02, mat.woodDark, handleX, 0, 0));
+                return group;
+            }
+
+            const doors = [];
+
+            // Cửa trước
+            const frontDoorGroup = new THREE.Group();
+            frontDoorGroup.position.set(0, DOOR_H/2 + 0.2, FRONT_WALL_Z);
+            const fDoorL = createShojiPanel(DOOR_W/2 + 0.05, DOOR_H - 0.1, 0.06, 'right');
+            fDoorL.position.set(-DOOR_W/4 + 0.02, 0, 0.035);
+            fDoorL.userData = { isOpen: false, axis: 'x', dir: -1, limit: DOOR_W/2 - 0.2, base: -DOOR_W/4 + 0.02 };
+            
+            const fDoorR = createShojiPanel(DOOR_W/2 + 0.05, DOOR_H - 0.1, 0.06, 'left');
+            fDoorR.position.set(DOOR_W/4 - 0.02, 0, -0.035);
+            fDoorR.userData = { isOpen: false, axis: 'x', dir: 1, limit: DOOR_W/2 - 0.2, base: DOOR_W/4 - 0.02 };
+            frontDoorGroup.add(fDoorL, fDoorR);
+            doors.push(fDoorL, fDoorR);
+            roomGroup.add(frontDoorGroup);
+
+            // Cửa sau
+            const innerDoorGroup = new THREE.Group();
+            innerDoorGroup.position.set(0, DOOR_H/2 + 0.4, BACK_WALL_Z);
+            const iDoorL = createShojiPanel(DOOR_W/2 + 0.05, DOOR_H - 0.1, 0.06, 'right');
+            iDoorL.position.set(-DOOR_W/4 + 0.02, 0, 0.035);
+            iDoorL.userData = { isOpen: false, axis: 'x', dir: -1, limit: DOOR_W/2 - 0.2, base: -DOOR_W/4 + 0.02 };
+            const iDoorR = createShojiPanel(DOOR_W/2 + 0.05, DOOR_H - 0.1, 0.06, 'left');
+            iDoorR.position.set(DOOR_W/4 - 0.02, 0, -0.035);
+            iDoorR.userData = { isOpen: false, axis: 'x', dir: 1, limit: DOOR_W/2 - 0.2, base: DOOR_W/4 - 0.02 };
+            innerDoorGroup.add(iDoorL, iDoorR);
+            doors.push(iDoorL, iDoorR);
+            roomGroup.add(innerDoorGroup);
+
+            // TRANG TRÍ
+            const getaBako = new THREE.Group();
+            getaBako.position.set(2.6, 1.2 + 0.2, -1.0); // Điều chỉnh vị trí sát tường hẹp
+            getaBako.add(createBox(1.3, 2.0, 0.6, mat.wood, 0, 0, 0)); 
+            roomGroup.add(getaBako);
+
+            const bonsai = new THREE.Group();
+            bonsai.position.set(2.6, 2.3 + 0.2, -1.0);
+            bonsai.add(createBox(0.4, 0.1, 0.3, mat.bonsaiPot, 0, 0, 0));
+            const leafGeo = new THREE.DodecahedronGeometry(0.25);
+            const l1 = new THREE.Mesh(leafGeo, mat.bonsaiLeaf); l1.position.set(0.1, 0.4, 0); bonsai.add(l1);
+            roomGroup.add(bonsai);
+
+            const paperLantern = new THREE.Group();
+            paperLantern.position.set(0, 4.2 + 0.2, 0.2); 
+            paperLantern.add(new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.0, 16), mat.shojiPaper));
+            roomGroup.add(paperLantern);
+
+            const slipperGroup = new THREE.Group();
+            slipperGroup.position.set(0.8, 0.22 + 0.2, 0.3);
+            slipperGroup.rotation.y = -0.3;
+            function makeSlipper(x) {
+                const s = createBox(0.2, 0.02, 0.5, new THREE.MeshStandardMaterial({color: 0x5d4037}), x, 0, 0);
+                return s;
+            }
+            slipperGroup.add(makeSlipper(-0.15), makeSlipper(0.15));
+            roomGroup.add(slipperGroup);
+
+            document.getElementById('loading').style.opacity = 0;
+
+            // --- TƯƠNG TÁC ---
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+
+            window.addEventListener('click', (e) => {
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(doors, true);
+                if (intersects.length > 0) {
+                    let obj = intersects[0].object;
+                    while(obj.parent && !doors.includes(obj)) obj = obj.parent;
+                    if (doors.includes(obj)) {
+                        const targetPos = obj.userData.isOpen ? obj.userData.base : obj.userData.base + (obj.userData.dir * obj.userData.limit);
+                        new TWEEN.Tween(obj.position).to({ x: targetPos }, 600).easing(TWEEN.Easing.Quadratic.Out).start();
+                        obj.userData.isOpen = !obj.userData.isOpen;
+                    }
+                }
+            });
+
+            // --- VÒNG LẶP ---
+            function animate(time) {
+                requestAnimationFrame(animate);
+                TWEEN.update(time);
+                controls.update();
+                lanternLight.intensity = 0.8 + Math.sin(time * 0.003) * 0.1;
+                renderer.render(scene, camera);
+            }
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+            animate(0);
+        }
+    <\/script>
+</body>
+</html>`;
+
+        let scene, camera, renderer, controls, houseGroup, mapLayerGroup, woodTexture;
+        let currentJsonData = null;
+        let centerOffset = new THREE.Vector3();
+
+        function log(msg, type = 'info') {
+            const box = document.getElementById('logBox');
+            if (!box) return;
+            const color = type === 'error' ? 'text-red-400' : 'text-indigo-400';
+            const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
+            box.innerHTML += `<div class="${color} mb-1 opacity-80">[${time}] ${msg}</div>`;
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function createWoodTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#63402b';
+            ctx.fillRect(0, 0, 512, 512);
+            ctx.strokeStyle = '#4a2f1f';
+            for (let i = 0; i < 64; i++) {
+                ctx.lineWidth = Math.random() * 3 + 1;
+                ctx.beginPath();
+                ctx.moveTo(0, Math.random() * 512);
+                ctx.bezierCurveTo(128, Math.random() * 512, 384, Math.random() * 512, 512, Math.random() * 512);
+                ctx.stroke();
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(4, 4);
+            return tex;
+        }
+
+        function initScene() {
+            const container = document.getElementById('threeContainer');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x09090b);
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100000);
+            camera.position.set(200, 200, 200);
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ReinhardToneMapping;
+            renderer.toneMappingExposure = 1.6;
+            container.appendChild(renderer.domElement);
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambient);
+            const sun = new THREE.DirectionalLight(0xffffff, 1.1);
+            sun.position.set(150, 400, 150);
+            sun.castShadow = true;
+            scene.add(sun);
+            scene.add(new THREE.GridHelper(4000, 100, 0x1e1e2e, 0x18181b));
+            woodTexture = createWoodTexture();
+            houseGroup = new THREE.Group();
+            mapLayerGroup = new THREE.Group();
+            scene.add(houseGroup);
+            scene.add(mapLayerGroup);
+            window.addEventListener('resize', () => {
+                if (camera && renderer) {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                }
+            });
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (window.TWEEN) TWEEN.update();
+            if (controls && typeof controls.update === 'function') {
+                try { controls.update(); } catch (e) { }
+            }
+            if (renderer && scene && camera && typeof renderer.render === 'function') {
+                try {
+                    renderer.render(scene, camera);
+                } catch (e) {
+                    // Fail-safe
+                }
+            }
+        }
+
+        function buildHouse(data) {
+            if (!houseGroup || !mapLayerGroup) return;
+            houseGroup.clear();
+            mapLayerGroup.clear();
+            currentJsonData = data;
+            if (!data.rooms) return log("Lỗi dữ liệu: JSON thiếu danh sách 'rooms'.", "error");
+
+            let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+            data.rooms.forEach(r => r.snapped_corners.forEach(c => {
+                minX = Math.min(minX, c[0]); maxX = Math.max(maxX, c[0]);
+                minZ = Math.min(minZ, c[1]); maxZ = Math.max(maxZ, c[1]);
+            }));
+            centerOffset.set(-(minX + maxX) / 2 * SCALE, 0, -(minZ + maxZ) / 2 * SCALE);
+
+            let forbiddenZones = [];
+            data.rooms.forEach(r => {
+                const roomName = (r.name || r.original_name || "").toLowerCase();
+                if (roomName.includes('balcony')) {
+                    const corners = r.snapped_corners;
+                    let segments = [];
+                    for (let i = 0; i < corners.length; i++) {
+                        const p1 = corners[i];
+                        const p2 = corners[(i + 1) % corners.length];
+                        const len = Math.abs(p2[0] - p1[0]);
+                        const isHorizontal = Math.abs(p2[0] - p1[0]) > Math.abs(p2[1] - p1[1]);
+                        if (isHorizontal) segments.push({ y: p1[1], xMin: Math.min(p1[0], p2[0]), xMax: Math.max(p1[0], p2[0]), len });
+                    }
+                    segments.sort((a, b) => b.len - a.len);
+                    forbiddenZones.push(...segments.slice(0, 2));
+                }
+            });
+
+            data.rooms.forEach(r => {
+                const pts = r.snapped_corners.map(p => new THREE.Vector3(p[0] * SCALE, 0, p[1] * SCALE).add(centerOffset));
+                const shape = new THREE.Shape();
+                shape.moveTo(pts[0].x, pts[0].z);
+                for (let i = 1; i < pts.length; i++) shape.lineTo(pts[i].x, pts[i].z);
+                const floorGeom = new THREE.ExtrudeGeometry(shape, { depth: 0.1, bevelEnabled: false });
+                const floorMat = new THREE.MeshStandardMaterial({ map: woodTexture, color: 0x888888, roughness: 0.8 });
+                const floor = new THREE.Mesh(floorGeom, floorMat);
+                floor.rotateX(Math.PI / 2);
+                floor.receiveShadow = true;
+                houseGroup.add(floor);
+
+                for (let i = 0; i < r.snapped_corners.length; i++) {
+                    const c1 = r.snapped_corners[i];
+                    const c2 = r.snapped_corners[(i + 1) % r.snapped_corners.length];
+
+                    const isHorizontal = Math.abs(c2[0] - c1[0]) > Math.abs(c2[1] - c1[1]);
+                    const xMin = Math.min(c1[0], c2[0]);
+                    const xMax = Math.max(c1[0], c2[0]);
+
+                    let shouldSkip = false;
+                    if (isHorizontal) {
+                        for (let zone of forbiddenZones) {
+                            if (Math.abs(c1[1] - zone.y) < 5) {
+                                const overlapMin = Math.max(xMin, zone.xMin);
+                                const overlapMax = Math.min(xMax, zone.xMax);
+                                if (overlapMax > overlapMin + 10) {
+                                    shouldSkip = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (shouldSkip) continue;
+
+                    const p1 = pts[i]; const p2 = pts[(i + 1) % pts.length];
+
+                    const rawP1 = r.snapped_corners[i];
+                    const rawP2 = r.snapped_corners[(i + 1) % r.snapped_corners.length];
+
+                    if (Math.abs(rawP1[0] - 1250) < 20 && Math.abs(rawP2[0] - 1250) < 20) {
+                        const minY = Math.min(rawP1[1], rawP2[1]);
+                        const maxY = Math.max(rawP1[1], rawP2[1]);
+                        if (minY < 1800 && maxY > 1670) continue;
+                    }
+
+                    if (Math.abs(rawP1[1] - 1676) < 20 && Math.abs(rawP2[1] - 1676) < 20) {
+                        const minX = Math.min(rawP1[0], rawP2[0]);
+                        const maxX = Math.max(rawP1[0], rawP2[0]);
+                        if (minX < 1430 && maxX > 1240) continue;
+                    }
+
+                    const vec = new THREE.Vector3().subVectors(p2, p1);
+                    const wall = new THREE.Mesh(
+                        new THREE.BoxGeometry(vec.length(), WALL_H, WALL_THICKNESS),
+                        new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1.0 })
+                    );
+                    wall.position.set((p1.x + p2.x) / 2, WALL_H / 2, (p1.z + p2.z) / 2);
+                    wall.rotation.y = -Math.atan2(p2.z - p1.z, p2.x - p1.x);
+                    wall.receiveShadow = true;
+                    houseGroup.add(wall);
+                }
+            });
+            log(`Dựng tường trắng thành công (Cao độ: 5.0). Đã ẩn triệt để tường giao nhau.`);
+
+            executeTxtMap(BALCONY_ASSET_CODE, "balcony.txt");
+            executeTxtMap(STORAGE_ASSET_CODE, "storage.txt");
+            executeTxtMap(BEDROOM_ASSET_CODE, "bedroom.txt");
+            executeTxtMap(BATHROOM_ASSET_CODE, "bathroom.txt");
+            executeTxtMap(ENTRANCE_ASSET_CODE, "entrance.txt");
+        }
+
+        function executeTxtMap(rawCode, fileName) {
+            if (!currentJsonData) return log("Cần nhấn DỰNG TƯỜNG TRẮNG trước!", "error");
+            try {
+                const fileKey = fileName.split('.')[0].toLowerCase();
+                let jsCode = rawCode;
+                if (jsCode.includes('<script')) {
+                    const scriptRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+                    let match; let combined = "";
+                    while ((match = scriptRegex.exec(jsCode)) !== null) combined += match[1].trim() + "\n";
+                    if (combined) jsCode = combined;
+                }
+                const sanitizedCode = jsCode.replace(/\bconst\b/g, 'var').replace(/\blet\b/g, 'var');
+                const allProcessedRooms = currentJsonData.rooms.map(r => {
+                    const pts = r.snapped_corners.map(p => new THREE.Vector3(p[0] * SCALE, 0, p[1] * SCALE).add(centerOffset));
+                    const box = new THREE.Box3().setFromPoints(pts);
+                    const size = new THREE.Vector3(); box.getSize(size);
+                    return { ...r, width: size.x, depth: size.z, box };
+                });
+
+                const livingRoom = allProcessedRooms.find(r =>
+                    (r.name && r.name.toLowerCase().includes('livingroom')) ||
+                    (r.original_name && r.original_name.toLowerCase().includes('livingroom'))
+                );
+
+                const targetRooms = allProcessedRooms.filter(r => {
+                    const n = (r.name || "").toLowerCase();
+                    const o = (r.original_name || "").toLowerCase();
+                    if (fileKey.includes("bedroom")) return n.includes("bedroom") || o.includes("master_room") || o.includes("common_room");
+                    if (fileKey.includes("bathroom")) return n.includes("bathroom") || o.includes("bathroom");
+                    if (fileKey.includes("balcony")) return n.includes("balcony") || o.includes("balcony");
+                    if (fileKey.includes("livingroom")) return n.includes("livingroom") || o.includes("livingroom");
+                    // NEW: Mở rộng từ khóa cho entrance
+                    if (fileKey.includes("entrance")) return n.includes("entrance") || n.includes("entry") || n.includes("foyer") || n.includes("genkan") || n.includes("sanh") || n.includes("lobby") || n.includes("porch") || n.includes("terrace") || n.includes("garden") || n.includes("courtyard") || n.includes("front");
+                    return n.includes(fileKey) || o.includes(fileKey);
+                });
+
+                // Nếu là entrance nhưng không tìm thấy phòng entrance, dùng livingroom
+                if (fileKey.includes("entrance") && targetRooms.length === 0) {
+                    if (livingRoom) targetRooms.push(livingRoom);
+                }
+
+                if (targetRooms.length === 0) {
+                    // Log ra tên các phòng để debug nếu không khớp
+                    const allNames = allProcessedRooms.map(r => r.name || r.original_name || "Unnamed").join(", ");
+                    return log(`Không khớp phòng "${fileKey}". Các phòng hiện có: ${allNames}`, "error");
+                }
+
+                targetRooms.forEach((targetRoom) => {
+                    const roomSubGroup = new THREE.Group();
+                    mapLayerGroup.add(roomSubGroup);
+
+                    let rotationY = 0;
+                    const isBedOrBath = fileKey.includes("bedroom") || fileKey.includes("bathroom");
+                    const isEntrance = fileKey.includes("entrance");
+
+                    if (livingRoom && targetRoom !== livingRoom) {
+                        const tCenter = new THREE.Vector3(); targetRoom.box.getCenter(tCenter);
+                        const lCenter = new THREE.Vector3(); livingRoom.box.getCenter(lCenter);
+                        const diffX = tCenter.x - lCenter.x;
+                        const diffZ = tCenter.z - lCenter.z;
+
+                        if (isEntrance) {
+                            // Logic xoay riêng cho Entrance: Quay lưng về phía Living Room (hướng ra ngoài)
+                            if (Math.abs(diffX) > Math.abs(diffZ)) {
+                                rotationY = (diffX > 0) ? Math.PI / 2 : -Math.PI / 2;
+                            } else {
+                                rotationY = (diffZ > 0) ? 0 : Math.PI;
+                            }
+                        } else if (Math.abs(diffX) > Math.abs(diffZ)) {
+                            if (isBedOrBath) {
+                                rotationY = (diffX < 0) ? 0 : Math.PI;
+                            } else {
+                                rotationY = (diffX < 0) ? Math.PI : 0;
+                            }
+                        } else {
+                            if (isBedOrBath) {
+                                rotationY = (diffZ < 0) ? -Math.PI / 2 : Math.PI / 2;
+                            } else {
+                                rotationY = (diffZ < 0) ? Math.PI / 2 : -Math.PI / 2;
+                            }
+                        }
+
+                        // FIX: Đảo ngược lại riêng cho Bedroom_2 nếu nó bị ngược
+                        const rName = (targetRoom.name || "").toLowerCase();
+                        const rOrg = (targetRoom.original_name || "").toLowerCase();
+                        if (rName.includes("bedroom_2") || rOrg.includes("bedroom_2") || rName.includes("bedroom 2")) {
+                            rotationY += Math.PI; // Xoay 180 độ
+                        }
+                    }
+
+                    if (fileKey.includes('storage')) {
+                        rotationY += 3 * Math.PI / 2;
+                    }
+
+                    roomSubGroup.rotation.y = rotationY;
+
+                    const isBalcony = (targetRoom.name || "").toLowerCase().includes('balcony');
+                    const isStorageFile = fileKey.includes('storage');
+
+                    const isForbiddenAssetPart = (obj) => {
+                        if (isBalcony) return false;
+                        if (obj && obj.geometry) {
+                            const p = obj.geometry.parameters;
+                            if (obj.geometry.type.includes('Box')) {
+                                if (p) {
+                                    if (p.width > 6 || p.depth > 6 || p.height > 6) return true;
+                                }
+                            }
+                            if (obj.geometry.type.includes('Plane')) {
+                                if (p) {
+                                    if (p.width > 6 || p.height > 6) return true;
+                                }
+                            }
+                        }
+                        return false;
+                    };
+
+                    const body = [
+                        "var roomGroup = scene;",
+                        "var filterRecursive = function(g) { if(!g || !g.children) return; for(var i = g.children.length - 1; i >= 0; i--) { var child = g.children[i]; if(isForbiddenAssetPart(child)) { g.remove(child); } else if(child.isGroup || child.type === 'Group') { filterRecursive(child); } } };",
+                        "var THREE_PROXY = new Proxy(THREE, { get: function(target, prop) {",
+                        "  if (prop === 'Scene') return function() { return { isScene: true, add: function(obj){ if (isForbiddenAssetPart(obj)) return; if (obj.isGroup || obj.type === 'Group') { filterRecursive(obj); } roomGroup.add(obj); }, clear: function(){}, shadowMap: { enabled: false }, background: { set: function(){} }, matrixWorldAutoUpdate: true }; };",
+                        "  if (prop === 'WebGLRenderer') return function() { ",
+                        "    return { ",
+                        "      isWebGLRenderer: true, setSize: function(){}, render: function(){}, setPixelRatio: function(){}, clear: function(){}, ",
+                        "      getRenderTarget: function(){ return null; }, setRenderTarget: function(){}, ",
+                        "      getDrawingBufferSize: function(t){ t.set(1200, 900); return t; }, ",
+                        "      getClearColor: function(c){ c.set(0,0,0); return c; }, getClearAlpha: function(){ return 0; }, ",
+                        "      shadowMap: { enabled: false, type: 0 }, ",
+                        "      capabilities: { maxAttributes: 16, maxCubemapSize: 1024, isWebGL2: true, logarithmicDepthBuffer: false }, ",
+                        "      info: { render: { calls: 0, frame: 0, triangles: 0 }, memory: { geometries: 0, textures: 0 } }, ",
+                        "      domElement: document.createElement('div'), xr: { enabled: false, setAnimationLoop: function(){} } ",
+                        "    }; ",
+                        "  };",
+                        "  if (prop === 'Group') return function() { var g = new target.Group(); var originalAdd = g.add; g.add = function(obj) { if (isForbiddenAssetPart(obj)) return g; originalAdd.apply(this, arguments); filterRecursive(g); return g; }; return g; };",
+                        "  return target[prop];",
+                        "} });",
+                        "var domMock = { addEventListener: function(){}, style: {}, clientWidth: 100, clientHeight: 100, getContext: function(){ return { fillRect: function(){}, beginPath: function(){}, moveTo: function(){}, lineTo: function(){}, stroke: function(){}, fill: function(){}, arc: function(){} }; } };",
+                        "var documentProxy = { getElementById: function(){ return domMock; }, createElement: function(tag){ if(tag === 'canvas') { var c = document.createElement('canvas'); c.width = 512; c.height = 512; return c; } return domMock; }, body: { appendChild: function(){} }, documentElement: { style: {} } };",
+                        "(function(THREE, scene, TWEEN, targetRoom, log, isForbiddenAssetPart, window, document, renderer, camera, container, controls, sceneGlobal, cameraGlobal) {",
+                        "  try {",
+                        sanitizedCode,
+                        "    if(typeof init === 'function') { init(); }",
+                        "  } catch(e) { log('Eval Error: ' + e.message, 'error'); }",
+                        "})(THREE_PROXY, roomGroup, TWEEN, targetRoom, log, isForbiddenAssetPart, ",
+                        "    { addEventListener: function(ev, fn){ /* Disabled load to prevent duplicate */ }, innerWidth: 1200, innerHeight: 900, document: documentProxy }, ",
+                        "    documentProxy, undefined, undefined, undefined, undefined, undefined, undefined);"
+                    ].join('\n');
+
+                    try {
+                        const execute = new Function('THREE', 'TWEEN', 'scene', 'targetRoom', 'log', 'isForbiddenAssetPart', body);
+                        execute(THREE, window.TWEEN, roomSubGroup, targetRoom, log, isForbiddenAssetPart);
+
+                        setTimeout(() => {
+                            if (!roomSubGroup) return;
+                            roomSubGroup.updateMatrixWorld(true);
+
+                            // === SPECIAL LOGIC FOR ENTRANCE IN LIVING ROOM CORNER (UPDATED) ===
+                            if (isEntrance) {
+                                // 1. Find the best corner (Furthest from other rooms -> likely exterior corner)
+                                let otherCenters = [];
+                                allProcessedRooms.forEach(r => {
+                                    if (r !== targetRoom) {
+                                        const c = new THREE.Vector3(); r.box.getCenter(c);
+                                        otherCenters.push(c);
+                                    }
+                                });
+
+                                let avoidPoint = new THREE.Vector3();
+                                if (otherCenters.length > 0) {
+                                    otherCenters.forEach(c => avoidPoint.add(c));
+                                    avoidPoint.divideScalar(otherCenters.length);
+                                } else {
+                                    targetRoom.box.getCenter(avoidPoint);
+                                }
+
+                                const pts = targetRoom.snapped_corners.map(p => new THREE.Vector3(p[0] * SCALE, 0, p[1] * SCALE).add(centerOffset));
+                                let bestCorner = pts[0];
+                                let maxDist = -1;
+                                let bestIndex = 0;
+
+                                pts.forEach((p, i) => {
+                                    const d = p.distanceTo(avoidPoint);
+                                    if (d > maxDist) {
+                                        maxDist = d;
+                                        bestCorner = p;
+                                        bestIndex = i;
+                                    }
+                                });
+
+                                // 2. Rotate to face inward (towards room center)
+                                const roomCenter = new THREE.Vector3(); targetRoom.box.getCenter(roomCenter);
+                                const cornerToCenter = new THREE.Vector3().subVectors(roomCenter, bestCorner);
+                                let angle = Math.atan2(cornerToCenter.x, cornerToCenter.z);
+                                rotationY = Math.round(angle / (Math.PI / 2)) * (Math.PI / 2);
+
+                                roomSubGroup.rotation.y = rotationY;
+                                roomSubGroup.updateMatrixWorld(true);
+
+                                // 3. Smart Scaling (Merge Scale): Fit width/depth within 45% of room dimension
+                                const roomSize = new THREE.Vector3(); targetRoom.box.getSize(roomSize);
+
+                                // Get unscaled dimensions
+                                roomSubGroup.scale.set(1, 1, 1);
+                                roomSubGroup.updateMatrixWorld(true);
+                                const rawBox = new THREE.Box3().setFromObject(roomSubGroup);
+                                const rawSize = new THREE.Vector3(); rawBox.getSize(rawSize);
+
+                                // Swap dimensions if rotated 90/270
+                                const isRotated90 = Math.abs(Math.sin(rotationY)) > 0.5;
+                                const assetWidthInRoomFrame = isRotated90 ? rawSize.z : rawSize.x;
+                                const assetDepthInRoomFrame = isRotated90 ? rawSize.x : rawSize.z;
+
+                                const maxWidth = roomSize.x * 0.45; // Avoid occupying >45% of room width
+                                const maxDepth = roomSize.z * 0.45; // Avoid occupying >45% of room depth
+
+                                const scaleX = maxWidth / assetWidthInRoomFrame;
+                                const scaleZ = maxDepth / assetDepthInRoomFrame;
+
+                                // Final scale ensures it fits BOTH constraints
+                                const finalScale = Math.min(scaleX, scaleZ, 1.0);
+
+                                roomSubGroup.scale.set(finalScale, finalScale, finalScale);
+                                roomSubGroup.updateMatrixWorld(true);
+
+                                // 4. Precise Alignment (Edge to Inner Wall)
+                                const scaledBox = new THREE.Box3().setFromObject(roomSubGroup);
+                                const scaledSize = new THREE.Vector3(); scaledBox.getSize(scaledSize);
+                                const currentCenter = new THREE.Vector3(); scaledBox.getCenter(currentCenter);
+
+                                // Move center to the chosen corner
+                                const toCorner = new THREE.Vector3().subVectors(bestCorner, currentCenter);
+                                roomSubGroup.position.add(toCorner);
+
+                                // Determine "Inward" direction vectors based on rotation
+                                // cornerToCenter gives general direction
+                                const dirX = cornerToCenter.x > 0 ? 1 : -1;
+                                const dirZ = cornerToCenter.z > 0 ? 1 : -1;
+
+                                // Shift by (AssetHalfSize + WallThicknessOffset) * Direction
+                                // This places the asset's outer edge exactly at the wall's inner surface
+                                const wallThickOffset = 0.15 / 2; // Half wall thickness
+                                const shiftX = (scaledSize.x / 2 + wallThickOffset) * (Math.abs(cornerToCenter.x) > Math.abs(cornerToCenter.z) || isRotated90 ? dirX : 0);
+                                // Logic refinement: We need to shift along BOTH axes relative to the corner
+                                // because it's a corner placement. 
+                                // Use 1.0 multiplier to ensure it clears the wall corner fully.
+
+                                // Simplified push: Just push inward along X and Z based on corner direction
+                                // Use Box Center relative to Corner
+
+                                // Re-calculate absolute shift needed
+                                const pushX = (scaledSize.x / 2) * dirX;
+                                const pushZ = (scaledSize.z / 2) * dirZ;
+
+                                // Apply wall offset only to the sides touching the wall
+                                // Since we rotated to face center, usually the 'back' and one 'side' touch walls
+                                // Let's simplify: Push the center INWARD from the corner by HalfSize
+                                roomSubGroup.position.x += pushX;
+                                roomSubGroup.position.z += pushZ;
+
+                                // Adjust height to avoid z-fighting on floor
+                                roomSubGroup.position.y = 0.25;
+
+                                log(`> Entrance Updated: Scale ${finalScale.toFixed(2)}, Edge Aligned.`);
+                                return;
+                            }
+                            // === END SPECIAL LOGIC ===
+
+                            const assetBox = new THREE.Box3().setFromObject(roomSubGroup);
+                            const assetSize = new THREE.Vector3(); assetBox.getSize(assetSize);
+
+                            if (assetSize.x > 0 && assetSize.z > 0) {
+                                if (isBalcony || isStorageFile) {
+                                    const worldRatioX = (targetRoom.width - 0.1) / assetSize.x;
+                                    const worldRatioZ = (targetRoom.depth - 0.1) / assetSize.z;
+                                    const isRotated90 = Math.abs(Math.sin(rotationY)) > 0.5;
+                                    let sX, sZ;
+                                    if (isRotated90) { sX = worldRatioZ; sZ = worldRatioX; } else { sX = worldRatioX; sZ = worldRatioZ; }
+                                    roomSubGroup.scale.set(sX, 1, sZ);
+                                } else {
+                                    const scale = Math.min((targetRoom.width - 0.4) / assetSize.x, (targetRoom.depth - 0.4) / assetSize.z);
+                                    roomSubGroup.scale.multiplyScalar(scale);
+                                }
+
+                                roomSubGroup.updateMatrixWorld(true);
+                                const scaledBox = new THREE.Box3().setFromObject(roomSubGroup);
+                                const offset = new THREE.Vector3();
+
+                                const roomCenter = targetRoom.box.getCenter(new THREE.Vector3());
+                                const assetCenter = scaledBox.getCenter(new THREE.Vector3());
+                                const roomSize = new THREE.Vector3(); targetRoom.box.getSize(roomSize);
+                                const scaledAssetSize = new THREE.Vector3(); scaledBox.getSize(scaledAssetSize);
+
+                                offset.x = roomCenter.x - assetCenter.x;
+                                offset.z = roomCenter.z - assetCenter.z;
+
+                                // Logic đẩy sát tường
+                                if (isBedOrBath || isEntrance) {
+                                    const paddingX = (roomSize.x - scaledAssetSize.x) / 2;
+                                    const paddingZ = (roomSize.z - scaledAssetSize.z) / 2;
+
+                                    // Normalize rotation
+                                    let r = rotationY % (Math.PI * 2);
+                                    if (r < 0) r += Math.PI * 2;
+
+                                    // Direction vector for anchoring
+                                    let anchorV;
+                                    if (isEntrance) {
+                                        anchorV = new THREE.Vector3(0, 0, 1); // Entrance: Push "Front" (+Z) to wall
+                                    } else {
+                                        anchorV = new THREE.Vector3(-1, 0, -1); // Bedroom/Bath: Push "Back"
+                                    }
+
+                                    anchorV.applyAxisAngle(new THREE.Vector3(0, 1, 0), r);
+
+                                    // Apply push
+                                    if (anchorV.x < -0.5) offset.x -= paddingX;
+                                    if (anchorV.x > 0.5) offset.x += paddingX;
+                                    if (anchorV.z < -0.5) offset.z -= paddingZ;
+                                    if (anchorV.z > 0.5) offset.z += paddingZ;
+                                }
+
+                                roomSubGroup.position.add(offset);
+                                roomSubGroup.position.y = 0.01;
+                                log(`> Done: ${targetRoom.name} (Height: 5.0) - Đã đẩy sát vách.`);
+                            }
+                        }, 100);
+                    } catch (err) { log(`Execution Error: ${err.message}`, "error"); }
+                });
+            } catch (e) { log("Import Error: " + e.message, "error"); }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnBuild = document.getElementById('btnBuild');
+            const btnImportTxt = document.getElementById('btnImportTxt');
+            const fileTxtMap = document.getElementById('fileTxtMap');
+            
+            if (btnBuild) {
+                btnBuild.onclick = () => {
+                    try {
+                        const input = document.getElementById('jsonInput').value;
+                        if (!input) return log("Vui lòng dán JSON Layout Data.", "error");
+                        const data = JSON.parse(input);
+                        buildHouse(data);
+                    } catch (e) { 
+                        log("Lỗi định dạng: " + e.message, "error"); 
+                    }
+                };
+            }
+
+            if (btnImportTxt && fileTxtMap) {
+                btnImportTxt.onclick = () => fileTxtMap.click();
+                fileTxtMap.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    executeTxtMap(await file.text(), file.name);
+                    e.target.value = '';
+                };
+            }
+
+            initScene();
+        });
+    </script>
+</body>
+
+</html>

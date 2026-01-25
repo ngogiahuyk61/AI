@@ -1,0 +1,34 @@
+<div class="animate-fade-in space-y-6">
+    <div class="bg-indigo-900 text-white p-6 rounded-xl shadow-lg">
+        <h3 class="font-bold text-lg mb-2 flex items-center gap-2"><i data-lucide="key" class="w-5 h-5"></i> API Key</h3>
+        <p class="text-indigo-200 text-sm mb-4">Sử dụng key này để kết nối ERP hoặc Website của bạn với WebAI.</p>
+        <div class="flex gap-2">
+            <input type="text" value="sk_live_51Msz...x9s8A" disabled class="w-full bg-indigo-950 border border-indigo-700 text-gray-300 text-sm rounded px-3 py-2 font-mono">
+            <button onclick="IntegrationModule.copy()" class="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded text-sm font-medium transition-colors">Copy</button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="border border-gray-200 bg-white p-4 rounded-xl flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/59/SAP_2011_logo.svg" class="h-8 w-auto opacity-80" alt="SAP">
+                <div>
+                    <h4 class="font-bold text-gray-800 text-sm">SAP ERP</h4>
+                    <p class="text-xs text-green-600 flex items-center gap-1"><span class="w-1.5 h-1.5 bg-green-600 rounded-full"></span> Connected</p>
+                </div>
+            </div>
+            <button class="text-gray-400 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>
+        
+        <div class="border border-gray-200 bg-white p-4 rounded-xl flex items-center justify-between opacity-75">
+            <div class="flex items-center gap-3">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Slack_icon_2019.svg" class="h-8 w-auto" alt="Slack">
+                <div>
+                    <h4 class="font-bold text-gray-800 text-sm">Slack Bot</h4>
+                    <p class="text-xs text-gray-400">Not connected</p>
+                </div>
+            </div>
+            <button class="text-blue-600 text-sm font-medium hover:underline">Kết nối</button>
+        </div>
+    </div>
+</div>

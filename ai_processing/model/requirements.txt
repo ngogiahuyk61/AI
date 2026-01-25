@@ -1,0 +1,18 @@
+numpy==1.26.0
+openai
+Pillow
+opencv-python
+matplotlib
+requests
+tqdm
+--extra-index-url https://download.pytorch.org/whl/cu118
+torch
+torchvision
+ema_pytorch
+transformers
+pandas
+einops
+dgl==2.0.0
+fuzzywuzzy
+langchain_core
+sentencepiece

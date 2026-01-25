@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSM 3D Digital Twin (Full Details)</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+
+    <!-- Tween.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background-color: #050505; font-family: 'Inter', sans-serif; }
+        #map { height: 100%; width: 100%; z-index: 10; position: absolute; top: 0; left: 0; cursor: crosshair; }
+        #three-container { height: 100%; width: 100%; z-index: 20; position: absolute; top: 0; left: 0; display: none; cursor: default; }
+        
+        /* Glass Panel */
+        .glass-panel {
+            background: rgba(15, 15, 15, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+        }
+
+        .loading-overlay { background: rgba(0, 0, 0, 0.9); z-index: 9999; backdrop-filter: blur(5px); }
+
+        /* POI Popup Label */
+        #poi-popup {
+            position: absolute;
+            display: none;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.85);
+            border: 1px solid #f97316;
+            border-left: 4px solid #f97316;
+            color: white;
+            padding: 12px;
+            border-radius: 4px;
+            pointer-events: none;
+            transform: translate(-50%, -100%);
+            margin-top: -15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+            min-width: 200px;
+        }
+        #poi-popup::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 6px 6px 0;
+            border-style: solid;
+            border-color: #f97316 transparent transparent transparent;
+        }
+
+        /* --- CONTROLLER STYLES --- */
+        .ctrl-container { display: flex; align-items: flex-end; gap: 20px; padding: 10px; }
+        .ctrl-pill { width: 48px; height: 110px; background: rgba(30, 30, 30, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 5px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .ctrl-btn-s { width: 38px; height: 38px; border-radius: 50%; background: rgba(255, 255, 255, 0.05); color: #ccc; display: flex; align-items: center; justify-content: center; transition: all 0.15s; cursor: pointer; }
+        .ctrl-btn-s:hover { background: rgba(255, 255, 255, 0.15); color: white; }
+        .ctrl-btn-s:active { background: #3b82f6; color: white; transform: scale(0.9); }
+        .ctrl-label { font-size: 8px; font-weight: 800; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+
+        .dpad-circle { width: 150px; height: 150px; background: radial-gradient(circle at center, #222 0%, #000 100%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 50%; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .dpad-btn { position: absolute; width: 48px; height: 48px; background: rgba(255, 255, 255, 0.05); border-radius: 14px; color: #ccc; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.1s; border: 1px solid rgba(255,255,255,0.05); }
+        .dpad-btn:active { background: #3b82f6; color: white; transform: scale(0.92); }
+        .dpad-btn.up { top: 10px; left: 50%; transform: translateX(-50%); }
+        .dpad-btn.down { bottom: 10px; left: 50%; transform: translateX(-50%); }
+        .dpad-btn.left { left: 10px; top: 50%; transform: translateY(-50%); }
+        .dpad-btn.right { right: 10px; top: 50%; transform: translateY(-50%); }
+        .dpad-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1)); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #3b82f6; cursor: pointer; }
+    </style>
+
+    <!-- Import Maps for Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body class="text-slate-200">
+
+    <!-- VIEW 1: 2D MAP -->
+    <div id="map"></div>
+
+    <!-- VIEW 2: 3D SCENE -->
+    <div id="three-container"></div>
+    
+    <!-- POI POPUP -->
+    <div id="poi-popup">
+        <div class="text-xs font-bold text-orange-400 uppercase tracking-wider mb-1" id="poi-type">TYPE</div>
+        <div class="text-lg font-bold leading-tight" id="poi-name">Name</div>
+        <div class="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
+            <i data-lucide="info" class="w-3 h-3"></i> Click ra ngoài để đóng
+        </div>
+    </div>
+
+    <!-- LEFT UI: Search & Controls -->
+    <div id="map-ui" class="absolute top-6 left-6 z-[1000] flex flex-col gap-4 pointer-events-none w-96">
+        <div class="glass-panel p-6 rounded-2xl pointer-events-auto border-t border-white/10">
+            <!-- Search Section -->
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-blue-400 uppercase tracking-wide mb-2">Tìm kiếm địa điểm</label>
+                <div class="relative">
+                    <input type="text" id="search-input" placeholder="Nhập tên khu vực (VD: Ecopark, Đà Lạt...)" 
+                        class="w-full bg-black/50 border border-slate-700 rounded-xl py-3 pl-10 pr-12 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm">
+                    <i data-lucide="search" class="absolute left-3 top-3 w-4 h-4 text-slate-400"></i>
+                    <button onclick="executeSearch()" class="absolute right-2 top-2 p-1 bg-blue-600 rounded-lg hover:bg-blue-500 transition-colors">
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-white"></i>
+                    </button>
+                </div>
+            </div>
+            <!-- Bounding Box Info -->
+            <div class="mb-3 px-3 py-2 bg-slate-900/80 rounded-lg border border-slate-700 flex justify-between items-center">
+                <span class="text-xs text-slate-400 font-medium">Vùng dựng mô hình:</span>
+                <span id="bbox-status" class="text-xs font-mono font-bold text-green-400">1 km x 1 km</span>
+            </div>
+            <!-- Draw Custom Land Button -->
+            <div class="mb-3">
+                <button id="btn-draw-land" onclick="toggleDrawMode()" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-medium py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm">
+                    <i data-lucide="pen-tool" class="w-4 h-4"></i>
+                    Vẽ Khu Đất (Polyline)
+                </button>
+                <div id="draw-hd" class="hidden text-[10px] text-yellow-400 mt-1 text-center animate-pulse">
+                    Click để chọn điểm, Double-click để hoàn tất
+                </div>
+            </div>
+            <button id="btn-fetch" onclick="fetchBuildingData()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold py-3.5 px-4 rounded-xl transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 group active:scale-[0.98] border border-white/10">
+                <span class="group-hover:animate-pulse"><i data-lucide="box" class="w-5 h-5"></i></span>
+                Dựng Mô Hình
+            </button>
+        </div>
+    </div>
+
+    <!-- RIGHT UI: Map Import -->
+    <div id="map-import-ui" class="absolute top-6 right-6 z-[1000] flex flex-col gap-4 pointer-events-none w-80">
+        <div class="glass-panel rounded-2xl pointer-events-auto border-t border-white/10 overflow-hidden">
+            <!-- Header with Collapse -->
+            <div class="p-4 bg-slate-900/40 flex justify-between items-center cursor-pointer hover:bg-slate-800/40 transition-colors" onclick="toggleMapPanel()">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="map" class="w-5 h-5 text-blue-400"></i>
+                    <span class="font-bold text-sm tracking-wide">Map Code</span>
+                </div>
+                <i id="map-arrow" data-lucide="chevron-down" class="w-4 h-4 text-slate-400 transition-transform"></i>
+            </div>
+            <!-- Content -->
+            <div id="map-panel-content" class="p-4 space-y-4">
+                <div class="p-3 border border-dashed border-slate-600 rounded-xl bg-slate-800/30 text-center hover:bg-slate-800/50 transition-all group">
+                    <input type="file" id="map-file-input" accept=".txt,.html" class="hidden" onchange="handleMapImport(this)">
+                    <label for="map-file-input" class="cursor-pointer block">
+                        <div class="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                            <i data-lucide="upload" class="w-5 h-5 text-blue-400"></i>
+                        </div>
+                        <span class="text-xs font-bold text-blue-300 block mb-1">Import Map Code (.txt)</span>
+                        <span class="text-[10px] text-slate-500">Hỗ trợ script tùy chỉnh</span>
+                    </label>
+                </div>
+                <!-- NEW: Load Standard Map Button -->
+                <button onclick="loadStandardMap()" class="w-full py-2 px-3 bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 rounded-lg text-blue-300 text-xs font-bold flex items-center justify-center gap-2 transition-all">
+                    <i data-lucide="file-code" class="w-4 h-4"></i>
+                    Sử dụng Code Chuẩn (map.txt)
+                </button>
+                <!-- Import Status -->
+                <div id="import-status" class="hidden">
+                    <div class="flex items-center gap-3 p-2 bg-green-500/10 rounded-lg border border-green-500/20">
+                        <i data-lucide="check-circle-2" class="w-4 h-4 text-green-400"></i>
+                        <div>
+                            <div class="text-[10px] font-bold text-green-300">File Loaded</div>
+                            <div id="import-filename" class="text-[9px] text-slate-400 truncate w-32">code.txt</div>
+                        </div>
+                        <button onclick="clearImport()" class="ml-auto text-slate-500 hover:text-red-400"><i data-lucide="x" class="w-3 h-3"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: THEME TOGGLE (Top Left in 3D Mode) -->
+    <div id="theme-ui" class="absolute top-6 left-6 z-[1000] hidden pointer-events-none">
+        <button id="btn-theme-toggle" onclick="toggleMode()" class="pointer-events-auto w-12 h-12 rounded-full bg-slate-800 border border-white/20 text-yellow-400 flex items-center justify-center shadow-lg hover:scale-110 transition-transform" title="Chuyển chế độ Sáng/Tối">
+            <i data-lucide="sun" class="w-6 h-6"></i>
+        </button>
+    </div>
+
+    <!-- 3D UI Info (Hidden initially) -->
+    <div id="three-ui" class="absolute top-24 right-6 z-[1000] flex flex-col gap-3 pointer-events-none hidden items-end">
+        <div class="glass-panel p-4 rounded-xl pointer-events-auto w-64 border-t border-white/10">
+            <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 border-b border-white/5 pb-2 flex justify-between items-center">
+                Project Stats
+                <div class="flex gap-1.5 items-center">
+                    <span class="text-[9px] text-green-500 font-bold">ONLINE</span>
+                    <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.8)]"></div>
+                </div>
+            </h3>
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-slate-400 text-xs uppercase tracking-wide">Công trình</span>
+                    <span id="stat-buildings" class="font-mono font-bold text-white text-shadow-sm">0</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex gap-2 pointer-events-auto">
+            <button onclick="resetCamera()" class="glass-panel hover:bg-white/10 text-white p-3 rounded-xl transition-all border-t border-white/10" title="Reset View">
+                <i data-lucide="crosshair" class="w-5 h-5"></i>
+            </button>
+            <button onclick="exportToOBJ()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-3 rounded-xl shadow-lg active:scale-95 transition-all flex items-center gap-2 font-medium border border-white/10">
+                <i data-lucide="download" class="w-4 h-4"></i> .OBJ
+            </button>
+            <button onclick="close3DView()" class="glass-panel hover:bg-red-500/20 text-red-400 border-red-500/30 px-4 py-3 rounded-xl transition-all flex items-center gap-2 font-medium">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- PRO VIRTUAL CONTROLLER -->
+    <div id="virtual-controller" class="absolute bottom-10 right-10 z-[1000] hidden pointer-events-none select-none">
+        <div class="ctrl-container pointer-events-auto">
+            <div class="ctrl-pill">
+                <button onmousedown="startMove('up')" onmouseup="stopMove()" ontouchstart="startMove('up')" ontouchend="stopMove()" class="ctrl-btn-s"><i data-lucide="arrow-up" class="w-5 h-5"></i></button>
+                <span class="ctrl-label">CAO</span>
+                <button onmousedown="startMove('down')" onmouseup="stopMove()" ontouchstart="startMove('down')" ontouchend="stopMove()" class="ctrl-btn-s"><i data-lucide="arrow-down" class="w-5 h-5"></i></button>
+            </div>
+            <div class="ctrl-pill">
+                <button onmousedown="startMove('zoomIn')" onmouseup="stopMove()" ontouchstart="startMove('zoomIn')" ontouchend="stopMove()" class="ctrl-btn-s"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                <span class="ctrl-label">ZOOM</span>
+                <button onmousedown="startMove('zoomOut')" onmouseup="stopMove()" ontouchstart="startMove('zoomOut')" ontouchend="stopMove()" class="ctrl-btn-s"><i data-lucide="minus" class="w-5 h-5"></i></button>
+            </div>
+            <div class="dpad-circle">
+                <button onmousedown="startMove('forward')" onmouseup="stopMove()" ontouchstart="startMove('forward')" ontouchend="stopMove()" class="dpad-btn up"><i data-lucide="chevron-up" class="w-6 h-6"></i></button>
+                <button onmousedown="startMove('backward')" onmouseup="stopMove()" ontouchstart="startMove('backward')" ontouchend="stopMove()" class="dpad-btn down"><i data-lucide="chevron-down" class="w-6 h-6"></i></button>
+                <button onmousedown="startMove('left')" onmouseup="stopMove()" ontouchstart="startMove('left')" ontouchend="stopMove()" class="dpad-btn left"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>
+                <button onmousedown="startMove('right')" onmouseup="stopMove()" ontouchstart="startMove('right')" ontouchend="stopMove()" class="dpad-btn right"><i data-lucide="chevron-right" class="w-6 h-6"></i></button>
+                <div onclick="resetCamera()" class="dpad-center" title="Về tâm"><div class="w-2 h-2 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Tip -->
+    <div id="help-ui" class="absolute bottom-10 left-10 z-[1000] hidden pointer-events-none md:block">
+        <div class="glass-panel px-5 py-3 rounded-full flex gap-6 text-xs font-medium text-slate-400 border border-white/5">
+            <span class="flex items-center gap-2"><kbd class="bg-white/10 px-2 py-1 rounded text-white border border-white/10 font-mono">L-Click</kbd> Xoay View</span>
+            <span class="flex items-center gap-2"><kbd class="bg-white/10 px-2 py-1 rounded text-white border border-white/10 font-mono">R-Click</kbd> Pan View</span>
+            <span class="flex items-center gap-2"><kbd class="bg-white/10 px-2 py-1 rounded text-white border border-white/10 font-mono">Scroll</kbd> Zoom</span>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loader" class="loading-overlay fixed inset-0 flex flex-col items-center justify-center hidden text-white">
+        <div class="relative w-24 h-24 mb-8">
+            <div class="absolute inset-0 border-2 border-slate-800 rounded-full"></div>
+            <div class="absolute inset-0 border-t-2 border-blue-500 rounded-full animate-spin shadow-[0_0_20px_rgba(59,130,246,0.4)]"></div>
+            <div class="absolute inset-2 border-t-2 border-indigo-500 rounded-full animate-spin" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
+            <i data-lucide="globe" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-blue-500 animate-pulse"></i>
+        </div>
+        <p id="loader-text" class="text-2xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 uppercase">Khởi tạo</p>
+        <p class="text-sm text-slate-500 mt-2 font-mono uppercase tracking-wide">Đang tải dữ liệu vệ tinh...</p>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed top-8 left-1/2 -translate-x-1/2 z-[3000] transform -translate-y-32 opacity-0 transition-all duration-300 px-6 py-3 rounded-full shadow-2xl font-medium text-white flex items-center gap-3 backdrop-blur-xl border border-white/10">
+        <i data-lucide="alert-circle" class="w-5 h-5"></i>
+        <span id="toast-msg">Message</span>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { OBJExporter } from 'three/addons/exporters/OBJExporter.js';
+        import { Sky } from 'three/addons/objects/Sky.js';
+        import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
+
+        // --- VARIABLES ---
+        const FIXED_BOX_SIZE_METERS = 1000; 
+        const OVERPASS_TIMEOUT = 180; 
+        const OVERPASS_SERVERS = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
+        const MIN_GREENERY_AREA = 500; // Ngưỡng diện tích tối thiểu để dựng cỏ (m2)
+
+        let map, scene, camera, renderer, controls, exportGroup; 
+        let animationId;
+        let bboxLayer; 
+        let customLandLayer = null; 
+        let customLandPoints = []; 
+        let tempLine = null; 
+        let isDrawing = false;
+        let importedMapCode = null; 
+        let poiObjects = []; // Store Interactive Buildings
+        let roadsForCollision = []; // Store road curves for collision detection
+        let isDarkMode = true; // NEW STATE
+        let bulbMat; // Global bulb material for theme toggle
+        let currentCustomCenter = null; // GLOBAL VARIABLE TO STORE CUSTOM CENTER FOR CAMERA
+
+        let raycaster, mouse;
+        let moveState = { forward: false, backward: false, left: false, right: false, up: false, down: false, zoomIn: false, zoomOut: false };
+        const MOVE_SPEED = 3.0, ZOOM_SPEED = 1.0;
+
+        // STANDARD MAP CODE (Template)
+        const STANDARD_MAP_CODE = `
+// Map Code Chuẩn: Tạo một khối nhà mẫu và cây xanh
+var matMain = new THREE.MeshStandardMaterial({ color: 0x3b82f6 });
+var house = createBox(20, 15, 20, matMain, 0, 7.5, 0);
+scene.add(house);
+
+var matRoof = new THREE.MeshStandardMaterial({ color: 0xef4444 });
+var roof = createCylinder(0, 15, 10, matRoof, 0, 20, 0);
+scene.add(roof);
+
+var matTrunk = new THREE.MeshStandardMaterial({ color: 0x78350f });
+var treeTrunk = createCylinder(1, 1, 10, matTrunk, 30, 5, 30);
+scene.add(treeTrunk);
+
+var matLeaves = new THREE.MeshStandardMaterial({ color: 0x22c55e });
+var treeLeaves = createBox(10, 10, 10, matLeaves, 30, 15, 30);
+scene.add(treeLeaves);
+        `;
+
+        // --- CONFIG (Optimized Widths) ---
+        const ROAD_CONFIG = { 
+            // Main Roads
+            'motorway': { width: 22, color: 0x334155 },  
+            'trunk': { width: 20, color: 0x334155 },     
+            'primary': { width: 18, color: 0x475569 },   
+            'secondary': { width: 15, color: 0x475569 }, 
+            
+            // Smaller Roads (Activated)
+            'tertiary': { width: 12, color: 0x475569 },
+            'residential': { width: 10, color: 0x555555 }, 
+            'service': { width: 6, color: 0x555555 },
+            'living_street': { width: 8, color: 0x555555 },
+            
+            // Pedestrian & Paths
+            'footway': { width: 3, color: 0x888888 },
+            'pedestrian': { width: 3, color: 0x888888 },
+            'path': { width: 2, color: 0x887766 },
+            'cycleway': { width: 3, color: 0xef4444 }, // Red for bike lanes
+            'track': { width: 4, color: 0x8b5a2b }, // Dirt road color
+            
+            'default': { width: 4, color: 0x555555 }
+        };
+        
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+
+        initMap();
+
+        function initMap() {
+            map = L.map('map', { zoomControl: false }).setView([10.7769, 106.7009], 16); 
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+            
+            document.getElementById('search-input').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') executeSearch();
+            });
+
+            bboxLayer = L.rectangle(getFixedBounds(map.getCenter()), {color: "#3b82f6", weight: 2, fillOpacity: 0.05, dashArray: '5, 5', interactive: false}).addTo(map);
+            
+            map.on('move', updateBoundingBoxVisual);
+            map.on('zoom', updateBoundingBoxVisual);
+            map.on('resize', updateBoundingBoxVisual);
+            map.on('click', onMapClick);
+            map.on('mousemove', onMapMouseMove);
+            map.on('dblclick', onMapDblClick);
+
+            setTimeout(updateBoundingBoxVisual, 500);
+        }
+
+        window.toggleDrawMode = function() {
+            isDrawing = !isDrawing;
+            const btn = document.getElementById('btn-draw-land');
+            const hint = document.getElementById('draw-hd');
+            
+            if (isDrawing) {
+                map.doubleClickZoom.disable(); 
+                map.dragging.disable();
+                document.getElementById('map').style.cursor = 'crosshair';
+                btn.classList.replace('bg-slate-800', 'bg-yellow-600');
+                btn.innerHTML = `<i data-lucide="x" class="w-4 h-4"></i> Hủy Vẽ`;
+                hint.classList.remove('hidden');
+                
+                if (customLandLayer) {
+                     map.removeLayer(customLandLayer);
+                     customLandLayer = null;
+                }
+                customLandPoints = [];
+                if (tempLine) {
+                    map.removeLayer(tempLine);
+                    tempLine = null;
+                }
+            } else {
+                map.doubleClickZoom.enable();
+                map.dragging.enable();
+                document.getElementById('map').style.cursor = '';
+                btn.classList.replace('bg-yellow-600', 'bg-slate-800');
+                btn.innerHTML = `<i data-lucide="pen-tool" class="w-4 h-4"></i> Vẽ Khu Đất (Polyline)`;
+                hint.classList.add('hidden');
+                if (tempLine) {
+                    map.removeLayer(tempLine);
+                    tempLine = null;
+                }
+            }
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function onMapClick(e) {
+            if (!isDrawing) return;
+            customLandPoints.push(e.latlng);
+            if (!customLandLayer) {
+                customLandLayer = L.polygon(customLandPoints, {color: "#facc15", weight: 2, fillColor: "#facc15", fillOpacity: 0.3}).addTo(map);
+            } else {
+                customLandLayer.setLatLngs(customLandPoints);
+            }
+        }
+
+        function onMapMouseMove(e) {
+            if (!isDrawing || customLandPoints.length === 0) return;
+            const lastPoint = customLandPoints[customLandPoints.length - 1];
+            if (!tempLine) {
+                tempLine = L.polyline([lastPoint, e.latlng], {color: "#facc15", weight: 1, dashArray: '5, 5'}).addTo(map);
+            } else {
+                tempLine.setLatLngs([lastPoint, e.latlng]);
+            }
+        }
+
+        function onMapDblClick(e) {
+            if (!isDrawing) return;
+            if (tempLine) { map.removeLayer(tempLine); tempLine = null; }
+            if (customLandPoints.length < 3) { showToast("Cần ít nhất 3 điểm để tạo vùng đất!", true); return; }
+            isDrawing = false;
+            map.doubleClickZoom.enable(); map.dragging.enable();
+            document.getElementById('map').style.cursor = '';
+            const btn = document.getElementById('btn-draw-land');
+            btn.classList.replace('bg-yellow-600', 'bg-slate-800');
+            btn.innerHTML = `<i data-lucide="pen-tool" class="w-4 h-4"></i> Vẽ Khu Đất (Polyline)`;
+            document.getElementById('draw-hd').classList.add('hidden');
+            showToast("Đã chọn khu đất! Bấm 'Dựng Mô Hình' để xem.", false);
+        }
+
+        window.toggleMapPanel = function() {
+            const content = document.getElementById('map-panel-content');
+            const arrow = document.getElementById('map-arrow');
+            content.classList.toggle('hidden');
+            arrow.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+
+        window.handleMapImport = function(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                importedMapCode = content; 
+                document.getElementById('import-status').classList.remove('hidden');
+                document.getElementById('import-filename').innerText = file.name;
+                showToast("Đã import code map! Hãy khoanh vùng và bấm Dựng Mô Hình.", false);
+            };
+            reader.readAsText(file);
+        }
+
+        window.loadStandardMap = function() {
+            importedMapCode = STANDARD_MAP_CODE;
+            document.getElementById('import-status').classList.remove('hidden');
+            document.getElementById('import-filename').innerText = "map.txt (Standard)";
+            showToast("Đã nạp Code Chuẩn! Hãy khoanh vùng khu đất để áp dụng.", false);
+        }
+
+        window.clearImport = function() {
+            importedMapCode = null;
+            document.getElementById('map-file-input').value = "";
+            document.getElementById('import-status').classList.add('hidden');
+        }
+
+        function getFixedBounds(center) {
+            const lat = center.lat;
+            const lon = center.lng;
+            const r = 6378137; 
+            const dy = FIXED_BOX_SIZE_METERS / 2;
+            const dx = FIXED_BOX_SIZE_METERS / 2;
+            const dLat = (dy / r) * (180 / Math.PI);
+            const dLon = (dx / (r * Math.cos(Math.PI * lat / 180))) * (180 / Math.PI);
+            return L.latLngBounds([[lat - dLat, lon - dLon], [lat + dLat, lon + dLon]]);
+        }
+
+        function updateBoundingBoxVisual() {
+            if (!map) return;
+            const bounds = getFixedBounds(map.getCenter());
+            bboxLayer.setBounds(bounds);
+        }
+
+        window.executeSearch = function() {
+            const query = document.getElementById('search-input').value;
+            if(query) searchLocation(query);
+        }
+
+        window.searchLocation = async function(query) {
+            const loader = document.getElementById('loader');
+            loader.classList.remove('hidden');
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.length > 0) {
+                    const place = data[0];
+                    map.setView([parseFloat(place.lat), parseFloat(place.lon)], 16);
+                    showToast(`Đã tìm thấy: ${place.display_name.split(',')[0]}`, false);
+                } else {
+                    showToast("Không tìm thấy địa điểm này.", true);
+                }
+            } catch (e) {
+                showToast("Lỗi tìm kiếm: " + e.message, true);
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+
+        window.fetchBuildingData = async function() {
+            const bounds = getFixedBounds(map.getCenter());
+            const loader = document.getElementById('loader');
+            loader.classList.remove('hidden');
+            document.getElementById('btn-fetch').disabled = true;
+
+            try {
+                const s = bounds.getSouth(), w = bounds.getWest(), n = bounds.getNorth(), e = bounds.getEast();
+                const query = `[out:json][timeout:${OVERPASS_TIMEOUT}];
+                (
+                    way["building"](${s},${w},${n},${e});
+                    relation["building"](${s},${w},${n},${e});
+                    way["building:part"](${s},${w},${n},${e});
+                    way["highway"](${s},${w},${n},${e});
+                    way["waterway"](${s},${w},${n},${e});
+                    relation["waterway"](${s},${w},${n},${e});
+                    way["natural"="water"](${s},${w},${n},${e});
+                    way["landuse"~"grass|forest|orchard|allotments|farmland|meadow|greenfield|recreation_ground|village_green"](${s},${w},${n},${e});
+                    relation["landuse"~"grass|forest|orchard|allotments|farmland|meadow|greenfield|recreation_ground|village_green"](${s},${w},${n},${e});
+                    way["leisure"~"park|garden|golf_course|pitch"](${s},${w},${n},${e});
+                    relation["leisure"~"park|garden|golf_course|pitch"](${s},${w},${n},${e});
+                    node["amenity"](${s},${w},${n},${e});
+                    node["shop"](${s},${w},${n},${e});
+                    node["name"](${s},${w},${n},${e});
+                );
+                out body;
+                >;
+                out skel qt;`;
+
+                let osmData = null;
+                for (let server of OVERPASS_SERVERS) {
+                    try {
+                        const res = await fetch(server, { method: 'POST', body: "data=" + encodeURIComponent(query), headers: {'Content-Type': 'application/x-www-form-urlencoded'}, credentials: 'omit' });
+                        if (!res.ok) throw new Error(res.status);
+                        osmData = await res.json();
+                        break;
+                    } catch (e) {}
+                }
+
+                if (!osmData || !osmData.elements.length) throw new Error("Không có dữ liệu hoặc lỗi kết nối.");
+
+                document.getElementById('loader-text').innerText = "ĐANG DỰNG MÔ HÌNH...";
+                setTimeout(() => {
+                    processDataAndRender3D(osmData, { lat: map.getCenter().lat, lon: map.getCenter().lng });
+                    loader.classList.add('hidden');
+                    document.getElementById('btn-fetch').disabled = false;
+                }, 100);
+
+            } catch (error) {
+                showToast("Lỗi: " + error.message, true);
+                loader.classList.add('hidden');
+                document.getElementById('btn-fetch').disabled = false;
+            }
+        }
+
+        function processDataAndRender3D(osmData, center) {
+            const nodes = {}, buildings = [], roads = [], trees = [], waterArr = [], greenery = [];
+            osmData.elements.forEach(el => {
+                if (el.type === 'node') { 
+                    nodes[el.id] = {lat:el.lat, lon:el.lon, tags: el.tags}; 
+                }
+            });
+            osmData.elements.forEach(el => {
+                if (el.type === 'way' && el.nodes.length > 1) {
+                    const wayNodes = el.nodes.map(id => nodes[id]).filter(Boolean);
+                    if (wayNodes.length < 2) return;
+                    const item = { id: el.id, tags: el.tags || {}, nodes: wayNodes };
+                    if (item.tags.building || item.tags['building:part']) buildings.push(item);
+                    else if (item.tags.highway) roads.push(item);
+                    else if (item.tags.waterway || item.tags.natural === 'water') waterArr.push(item);
+                    else if (item.tags.landuse || item.tags.leisure) greenery.push(item);
+                }
+            });
+
+            document.getElementById('stat-buildings').innerText = buildings.length;
+            
+            if (buildings.length < 5) showToast("Khu vực này có ít dữ liệu nhà trên OSM.", true);
+
+            document.getElementById('map').style.display = 'none';
+            document.getElementById('map-ui').style.display = 'none';
+            document.getElementById('three-container').style.display = 'block';
+            document.getElementById('three-ui').classList.remove('hidden');
+            document.getElementById('theme-ui').classList.remove('hidden'); // SHOW THEME UI
+            document.getElementById('virtual-controller').classList.replace('hidden', 'block'); 
+            document.getElementById('help-ui').classList.remove('hidden');
+            document.getElementById('map-import-ui').classList.add('hidden'); 
+
+            initThreeJS({ buildings, roads, trees: [], water: waterArr, greenery }, center); 
+        }
+
+        function project(lat, lon, center) {
+            const R = 6378137;
+            const x = (lon - center.lon) * (Math.PI / 180) * R * Math.cos(center.lat * Math.PI / 180);
+            const z = -(lat - center.lat) * (Math.PI / 180) * R;
+            return { x, z };
+        }
+
+        function createRibbonGeometry(curve, width, segments) {
+            const points = curve.getPoints(segments);
+            const vertices = [];
+            const indices = [];
+            const halfWidth = width / 2;
+
+            for (let i = 0; i < points.length; i++) {
+                const p = points[i];
+                let tangent;
+                if (i === 0) tangent = new THREE.Vector3().subVectors(points[i + 1], points[i]).normalize();
+                else if (i === points.length - 1) tangent = new THREE.Vector3().subVectors(points[i], points[i - 1]).normalize();
+                else tangent = new THREE.Vector3().subVectors(points[i], points[i - 1]).add(new THREE.Vector3().subVectors(points[i + 1], points[i])).normalize();
+
+                const perp = new THREE.Vector3(-tangent.z, 0, tangent.x).multiplyScalar(halfWidth);
+                const pL = new THREE.Vector3().addVectors(p, perp);
+                const pR = new THREE.Vector3().subVectors(p, perp);
+                vertices.push(pL.x, pL.y, pL.z); 
+                vertices.push(pR.x, pR.y, pR.z); 
+            }
+
+            for (let i = 0; i < points.length - 1; i++) {
+                const base = i * 2;
+                indices.push(base, base + 1, base + 2);
+                indices.push(base + 1, base + 3, base + 2);
+            }
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setIndex(indices);
+            geometry.computeVertexNormals();
+            return geometry;
+        }
+
+        function isPointInPoly(x, z, polyPoints) {
+            let inside = false;
+            for (let i = 0, j = polyPoints.length - 1; i < polyPoints.length; j = i++) {
+                const xi = polyPoints[i].x, zi = polyPoints[i].z;
+                const xj = polyPoints[j].x, zj = polyPoints[j].z;
+                const intersect = ((zi > z) != (zj > z)) && (x < (xj - xi) * (z - zi) / (zj - zi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+        
+        function getPolygonArea(pts) {
+            let area = 0;
+            for (let i = 0; i < pts.length; i++) {
+                let j = (i + 1) % pts.length;
+                area += pts[i].x * pts[j].z;
+                area -= pts[j].x * pts[i].z;
+            }
+            return Math.abs(area / 2);
+        }
+
+        // NEW FUNCTION: Toggle Theme
+        window.toggleMode = function() {
+            isDarkMode = !isDarkMode;
+            const btn = document.getElementById('btn-theme-toggle');
+            
+            if (isDarkMode) {
+                // Dark Mode
+                scene.background = new THREE.Color(0x050505);
+                scene.fog = new THREE.FogExp2(0x050505, 0.0004);
+                btn.innerHTML = '<i data-lucide="sun" class="w-6 h-6"></i>'; // Reset HTML
+                btn.classList.replace('bg-white', 'bg-slate-800');
+                btn.classList.replace('text-yellow-600', 'text-yellow-400');
+                
+                // LIGHT UP LAMPS
+                if (bulbMat) {
+                    bulbMat.emissive.set(0xffff00);
+                    bulbMat.emissiveIntensity = 2.0;
+                }
+            } else {
+                // Light Mode (Blue Sky + White Clouds Effect)
+                scene.background = new THREE.Color(0x87CEEB); // Sky Blue
+                scene.fog = new THREE.FogExp2(0xe0f2fe, 0.0002); // Light atmospheric fog
+                btn.innerHTML = '<i data-lucide="moon" class="w-6 h-6"></i>'; // Reset HTML
+                btn.classList.replace('bg-slate-800', 'bg-white');
+                btn.classList.replace('text-yellow-400', 'text-yellow-600');
+
+                // TURN OFF LAMPS
+                if (bulbMat) {
+                    bulbMat.emissive.set(0x000000);
+                    bulbMat.emissiveIntensity = 0.0;
+                }
+            }
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function initThreeJS(data, center) {
+            const container = document.getElementById('three-container');
+            container.innerHTML = ''; 
+            poiObjects = []; 
+            roadsForCollision = [];
+            currentCustomCenter = null; // Reset custom center
+            
+            let generatedLamps = [];
+            let allPoles = [];
+
+            const w = container.clientWidth, h = container.clientHeight;
+            scene = new THREE.Scene();
+            
+            // Set initial state based on isDarkMode (default true)
+            isDarkMode = true;
+            scene.background = new THREE.Color(0x050505);
+            scene.fog = new THREE.FogExp2(0x050505, 0.0004);
+            
+            // Reset button state
+            const btn = document.getElementById('btn-theme-toggle');
+            btn.innerHTML = '<i data-lucide="sun" class="w-6 h-6"></i>';
+            btn.classList.replace('bg-white', 'bg-slate-800');
+            btn.classList.replace('text-yellow-600', 'text-yellow-400');
+            if (window.lucide) window.lucide.createIcons();
+
+            camera = new THREE.PerspectiveCamera(45, w / h, 1, 50000);
+            camera.position.set(0, 300, 300); 
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+            renderer.setSize(w, h);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFShadowMap; 
+            renderer.toneMapping = THREE.NoToneMapping; 
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
+            renderer.localClippingEnabled = true;
+
+            container.appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true; controls.dampingFactor = 0.1;
+            controls.zoomSpeed = 0.5; controls.enablePan = true; controls.panSpeed = 1.0;
+            controls.screenSpacePanning = true; controls.target.set(0, 0, 0); 
+            controls.maxPolarAngle = Math.PI / 2 - 0.02; controls.minDistance = 5; controls.maxDistance = 5000;
+            controls.autoRotate = false; 
+            controls.addEventListener('change', () => { if (camera.position.y < 5) camera.position.y = 5; });
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+            
+            const onMouseClick = (event) => {
+                const rect = renderer.domElement.getBoundingClientRect();
+                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(poiObjects, false);
+                const popup = document.getElementById('poi-popup');
+                
+                if (intersects.length > 0) {
+                    const obj = intersects[0].object;
+                    const meta = obj.userData;
+                    if (meta && meta.name) {
+                        document.getElementById('poi-name').innerText = meta.name;
+                        document.getElementById('poi-type').innerText = meta.type || "Building";
+                        popup.style.display = 'block';
+                        popup.style.left = event.clientX + 'px';
+                        popup.style.top = event.clientY + 'px';
+                    }
+                } else {
+                    popup.style.display = 'none';
+                }
+            };
+            container.addEventListener('click', onMouseClick);
+
+
+            // --- LIGHTS ---
+            const ambient = new THREE.AmbientLight(0xffffff, 0.6); scene.add(ambient);
+            
+            const sun = new THREE.DirectionalLight(0xfff7e6, 2.0);
+            sun.position.set(500, 1000, 500);
+            sun.castShadow = true;
+            sun.shadow.mapSize.set(1024, 1024); 
+            sun.shadow.camera.near = 0.5;
+            sun.shadow.camera.far = 3000;
+            const d = 1500;
+            sun.shadow.camera.left = -d; sun.shadow.camera.right = d;
+            sun.shadow.camera.top = d; sun.shadow.camera.bottom = -d;
+            scene.add(sun);
+
+            exportGroup = new THREE.Group();
+
+            const limit = FIXED_BOX_SIZE_METERS / 2;
+            const globalClipPlanes = [
+                new THREE.Plane(new THREE.Vector3(-1, 0, 0), limit), 
+                new THREE.Plane(new THREE.Vector3(1, 0, 0), limit),  
+                new THREE.Plane(new THREE.Vector3(0, 0, -1), limit), 
+                new THREE.Plane(new THREE.Vector3(0, 0, 1), limit)   
+            ];
+
+            const lowPolyBuildings = [];
+            const highPolyBuildings = [];
+
+            let customPolyPoints = null; 
+            let customCenter = null;
+            let customLandPlanes = [];
+
+            if (customLandPoints.length > 2) {
+                let minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
+                customLandPoints.forEach(p => {
+                    if (p.lat < minLat) minLat = p.lat;
+                    if (p.lat > maxLat) maxLat = p.lat;
+                    if (p.lng < minLon) minLon = p.lng;
+                    if (p.lng > maxLon) maxLon = p.lng;
+                });
+                
+                const centerLat = (minLat + maxLat) / 2;
+                const centerLon = (minLon + maxLon) / 2;
+                const c = project(centerLat, centerLon, center);
+                customCenter = { x: c.x, z: c.z };
+                currentCustomCenter = customCenter; // Update global variable
+
+                customPolyPoints = customLandPoints.map(p => {
+                    const proj = project(p.lat, p.lng, center);
+                    return { x: proj.x, z: proj.z };
+                });
+
+                // --- GENERATE CLIPPING PLANES FOR CUSTOM LAND ---
+                // Assume Convex Polygon for robustness.
+                // Normal direction must point INWARD (towards centroid).
+                for (let i = 0; i < customPolyPoints.length; i++) {
+                    const p1 = customPolyPoints[i];
+                    const p2 = customPolyPoints[(i + 1) % customPolyPoints.length];
+                    
+                    // Edge vector (p1 -> p2)
+                    const dx = p2.x - p1.x;
+                    const dz = p2.z - p1.z;
+                    
+                    // Normal (Rotate 90 deg: -dz, dx)
+                    let nx = -dz;
+                    let nz = dx;
+                    
+                    // Check direction towards centroid
+                    const cx = customCenter.x - p1.x;
+                    const cz = customCenter.z - p1.z;
+                    
+                    // If dot product is negative, normal points away
+                    if (nx * cx + nz * cz < 0) {
+                        nx = -nx;
+                        nz = -nz;
+                    }
+                    
+                    const len = Math.sqrt(nx*nx + nz*nz);
+                    if (len > 0) {
+                        // Create plane
+                        const plane = new THREE.Plane(new THREE.Vector3(nx/len, 0, nz/len), 0);
+                        // w = - (N . P)
+                        plane.constant = -((nx/len)*p1.x + (nz/len)*p1.z);
+                        customLandPlanes.push(plane);
+                    }
+                }
+
+                // --- VISUALIZE CUSTOM LAND IN 3D ---
+                const shape = new THREE.Shape();
+                shape.moveTo(customPolyPoints[0].x, -customPolyPoints[0].z);
+                for(let i=1; i<customPolyPoints.length; i++) shape.lineTo(customPolyPoints[i].x, -customPolyPoints[i].z);
+                
+                const landGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.1, bevelEnabled: false });
+                landGeo.rotateX(-Math.PI / 2);
+                
+                // HIDDEN: Floor mesh (Orange) removed as requested
+                /*
+                const landMat = new THREE.MeshStandardMaterial({ 
+                    color: 0xffa500, // Orange
+                    roughness: 0.8,
+                    opacity: 0.4,
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    clippingPlanes: globalClipPlanes
+                });
+                
+                const landMesh = new THREE.Mesh(landGeo, landMat);
+                landMesh.position.y = 0.02; 
+                landMesh.receiveShadow = true;
+                exportGroup.add(landMesh);
+                */
+
+                // KEEP BORDER LINE ONLY
+                const landEdges = new THREE.EdgesGeometry(landGeo);
+                const landLine = new THREE.LineSegments(landEdges, new THREE.LineBasicMaterial({ color: 0xffcc00, linewidth: 2, clippingPlanes: globalClipPlanes }));
+                exportGroup.add(landLine);
+            }
+
+            // --- 1. GENERATE ROADS ---
+            data.roads.forEach(r => {
+                let conf = ROAD_CONFIG[r.tags.highway];
+                
+                // FALLBACK FOR UNKNOWN ROADS
+                if (!conf) {
+                    if (r.tags.highway === 'service' || r.tags.highway === 'living_street') conf = ROAD_CONFIG['service'];
+                    else if (r.tags.highway === 'footway' || r.tags.highway === 'pedestrian' || r.tags.highway === 'path') conf = ROAD_CONFIG['footway'];
+                    else conf = ROAD_CONFIG['default'];
+                }
+
+                if (conf.width === 0) return;
+
+                let pts = r.nodes.map(n => { const p = project(n.lat, n.lon, center); return new THREE.Vector3(p.x, 0.1, p.z); }); 
+                pts = pts.filter((p, i) => i === 0 || p.distanceToSquared(pts[i - 1]) > 0.0001);
+                if(pts.length < 2) return;
+                const curve = new THREE.CatmullRomCurve3(pts);
+                
+                roadsForCollision.push({ curve: curve, width: conf.width });
+
+                const len = curve.getLength();
+                if (len < 1) return;
+                const segments = Math.max(8, Math.floor(len));
+                
+                const roadGeo = createRibbonGeometry(curve, conf.width, segments);
+                const roadMat = new THREE.MeshStandardMaterial({ color: conf.color, roughness: 0.9, metalness: 0.1, side: THREE.DoubleSide, clippingPlanes: globalClipPlanes, clipShadows: false }); 
+                const roadMesh = new THREE.Mesh(roadGeo, roadMat);
+                roadMesh.position.y = 0.05; roadMesh.receiveShadow = true; exportGroup.add(roadMesh);
+
+                if (conf.width >= 6) {
+                    const sidewalkWidth = conf.width + 5.0; 
+                    const swGeo = createRibbonGeometry(curve, sidewalkWidth, segments);
+                    const swMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.8, side: THREE.DoubleSide, clippingPlanes: globalClipPlanes, clipShadows: false });
+                    const swMesh = new THREE.Mesh(swGeo, swMat);
+                    swMesh.position.y = 0.03; swMesh.receiveShadow = true; exportGroup.add(swMesh);
+                }
+
+                if (conf.width >= 15) {
+                    const lineGeo = createRibbonGeometry(curve, 0.2, segments);
+                    const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, clippingPlanes: globalClipPlanes });
+                    const lineMesh = new THREE.Mesh(lineGeo, lineMat);
+                    lineMesh.position.y = 0.08; exportGroup.add(lineMesh);
+                }
+            });
+
+            // LAMPS
+            data.roads.forEach(r => {
+                 const conf = ROAD_CONFIG[r.tags.highway];
+                 if (!conf || conf.width < 10) return;
+                 let pts = r.nodes.map(n => { const p = project(n.lat, n.lon, center); return new THREE.Vector3(p.x, 0.1, p.z); });
+                 pts = pts.filter((p, i) => i === 0 || p.distanceToSquared(pts[i - 1]) > 0.0001);
+                 if(pts.length < 2) return;
+                 const curve = new THREE.CatmullRomCurve3(pts);
+                 const len = curve.getLength();
+                 
+                 const lampSpacing = 200; 
+                 const numLamps = Math.floor(len / lampSpacing);
+                 if (numLamps > 0) { 
+                      const offsetDist = (conf.width/2) + 3.0; 
+
+                      for(let i=0; i<=numLamps; i++) {
+                            const t = i / numLamps; 
+                            const point = curve.getPointAt(t); 
+                            const tangent = curve.getTangentAt(t).normalize(); 
+                            const normal = new THREE.Vector3(-tangent.z, 0, tangent.x);
+
+                            const posRight = point.clone().add(normal.clone().multiplyScalar(offsetDist));
+                            const lookAtPos = point.clone(); 
+                            
+                            let duplicate = false;
+                            for(const p of allPoles) {
+                               if (p.distanceToSquared(posRight) < 900) { 
+                                   duplicate = true; break;
+                               }
+                            }
+                            
+                            if (!duplicate) {
+                                generatedLamps.push({ pos: posRight, lookAt: lookAtPos });
+                                allPoles.push(posRight);
+                            }
+                      }
+                 }
+            });
+
+            // BUILDINGS
+            data.buildings.forEach(b => {
+                const pts = b.nodes.map(n => project(n.lat, n.lon, center));
+                if (customPolyPoints && isPointInPoly(pts[0].x, pts[0].z, customPolyPoints)) return; 
+
+                let h = 12;
+                if (b.tags.height) h = parseFloat(b.tags.height);
+                else if (b.tags['building:levels']) h = parseInt(b.tags['building:levels']) * 3.5;
+                
+                const shape = new THREE.Shape();
+                shape.moveTo(pts[0].x, -pts[0].z); for(let i=1; i<pts.length; i++) shape.lineTo(pts[i].x, -pts[i].z);
+                const geo = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false }); 
+                geo.rotateX(-Math.PI / 2); 
+
+                const isPOI = b.tags.name || b.tags.amenity || b.tags.shop || b.tags.office;
+                if (isPOI) {
+                    const matPOI = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, clippingPlanes: globalClipPlanes });
+                    const meshPOI = new THREE.Mesh(geo, matPOI);
+                    
+                    const edges = new THREE.EdgesGeometry(geo);
+                    const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xf97316, linewidth: 2, clippingPlanes: globalClipPlanes }));
+                    meshPOI.add(line);
+
+                    meshPOI.userData = { 
+                        name: b.tags.name || "Unknown Building", 
+                        type: b.tags.amenity || b.tags.shop || b.tags.office || "Structure"
+                    };
+                    
+                    exportGroup.add(meshPOI);
+                    poiObjects.push(meshPOI);
+                } else {
+                    if (h > 25) highPolyBuildings.push(geo);
+                    else lowPolyBuildings.push(geo);
+                }
+            });
+
+            if (lowPolyBuildings.length > 0) {
+                const mergedLow = BufferGeometryUtils.mergeGeometries(lowPolyBuildings, false);
+                const matLow = new THREE.MeshStandardMaterial({ 
+                    color: 0xe2e8f0, roughness: 0.8, metalness: 0.1,
+                    clippingPlanes: globalClipPlanes, clipShadows: true 
+                });
+                const meshLow = new THREE.Mesh(mergedLow, matLow);
+                meshLow.receiveShadow = true;
+                exportGroup.add(meshLow);
+            }
+
+            if (highPolyBuildings.length > 0) {
+                const mergedHigh = BufferGeometryUtils.mergeGeometries(highPolyBuildings, false);
+                const matHigh = new THREE.MeshStandardMaterial({ 
+                    color: 0x1e3a8a, 
+                    metalness: 0.8, roughness: 0.2,
+                    clippingPlanes: globalClipPlanes, clipShadows: true
+                });
+                const meshHigh = new THREE.Mesh(mergedHigh, matHigh);
+                meshHigh.castShadow = true; meshHigh.receiveShadow = true;
+                exportGroup.add(meshHigh);
+
+                const edgesGeo = new THREE.EdgesGeometry(mergedHigh, 15);
+                const edgesMat = new THREE.LineBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.8, clippingPlanes: globalClipPlanes });
+                const edgesMesh = new THREE.LineSegments(edgesGeo, edgesMat);
+                exportGroup.add(edgesMesh);
+            }
+
+            // --- CUSTOM MAP CODE SANDBOX WITH CLIPPING ---
+            if (importedMapCode && customCenter) {
+                try {
+                    const customGroup = new THREE.Group();
+                    customGroup.position.set(customCenter.x, 0, customCenter.z);
+                    const documentMock = {
+                        body: { appendChild: function(){} },
+                        getElementById: function(){ return { style: {} }; },
+                        createElement: function(tag){
+                            if (tag === 'canvas' || tag === 'img') return document.createElement(tag);
+                            return { style: {}, appendChild: function(){}, remove: function(){}, addEventListener: function(){} };
+                        }
+                    };
+                    const windowMock = { innerWidth: 1200, innerHeight: 900, addEventListener: function(ev, cb) { if(ev === 'load') { setTimeout(cb, 50); } } };
+                    const rendererMock = {
+                        setSize: function(){}, setPixelRatio: function(){}, setClearColor: function(){},
+                        render: function(){}, shadowMap: { enabled: true, type: 0 }, domElement: documentMock.createElement('div'),
+                        outputEncoding: 0, toneMapping: 0, capabilities: { isWebGL2: true },
+                        getRenderTarget: function() { return null; }, setRenderTarget: function() {}, renderLists: { dispose: function() {} }
+                    };
+                    
+                    // --- PROXY to Inject Clipping Planes ---
+                    const materialClasses = ['MeshStandardMaterial', 'MeshBasicMaterial', 'MeshPhongMaterial', 'MeshLambertMaterial', 'MeshPhysicalMaterial'];
+                    const THREE_PROXY = new Proxy(THREE, {
+                        get: function(target, prop) {
+                            if (prop === 'Scene') return function() {
+                                var s = new target.Scene();
+                                s.add = function(o) { customGroup.add(o); return s; };
+                                s.remove = function(o) { customGroup.remove(o); return s; };
+                                return s;
+                            };
+                            if (prop === 'WebGLRenderer') return function() { return rendererMock; };
+                            if (prop === 'OrbitControls') return OrbitControls;
+                            
+                            // Intercept Material Constructors
+                            if (materialClasses.includes(prop)) {
+                                return function(params) {
+                                    params = params || {};
+                                    // Combine global planes and custom land planes
+                                    const combinedPlanes = (params.clippingPlanes || []).concat(globalClipPlanes).concat(customLandPlanes);
+                                    params.clippingPlanes = combinedPlanes;
+                                    return new target[prop](params);
+                                };
+                            }
+
+                            return target[prop];
+                        }
+                    });
+
+                    let jsCode = importedMapCode;
+                    if (jsCode.includes('<script')) {
+                        const scriptRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+                        let match;
+                        let combined = "";
+                        while ((match = scriptRegex.exec(jsCode)) !== null) {
+                            const content = match[1].trim();
+                            if (content && !content.includes('THREE =')) combined += content + "\n";
+                        }
+                        if (combined) jsCode = combined;
+                    }
+                    
+                    const sanitizedCode = jsCode.replace(/\bconst\b/g, 'var').replace(/\blet\b/g, 'var');
+                    const helpers = `var createBox=function(w,h,d,m,x,y,z,c){if(c===undefined)c=true;var o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x||0,y||0,z||0);o.castShadow=c;o.receiveShadow=true;return o;};var createCylinder=function(rt,rb,h,m,x,y,z,c){if(c===undefined)c=true;var o=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,32),m);o.position.set(x||0,y||0,z||0);o.castShadow=c;o.receiveShadow=true;return o;};`;
+                    const runScript = new Function('THREE', 'scene', 'renderer', 'camera', 'controls', 'TWEEN', 'window', 'document', helpers + sanitizedCode);
+                    runScript(THREE_PROXY, new THREE_PROXY.Scene(), rendererMock, new THREE.PerspectiveCamera(), {}, window.TWEEN, windowMock, documentMock);
+                    
+                    exportGroup.add(customGroup);
+                    /* // REMOVED: Yellow Marker Ring
+                    const marker = new THREE.Mesh(new THREE.RingGeometry(8, 9, 32), new THREE.MeshBasicMaterial({ color: 0xffff00, side: THREE.DoubleSide }));
+                    marker.position.set(customCenter.x, 0.5, customCenter.z);
+                    marker.rotation.x = -Math.PI / 2;
+                    exportGroup.add(marker);
+                    */
+                } catch (e) {
+                    console.error("Custom Script Error:", e);
+                    showToast("Lỗi khi chạy script tùy chỉnh: " + e.message, true);
+                }
+            } else if (importedMapCode && !customCenter) {
+                showToast("CẢNH BÁO: Bạn đã tải file nhưng CHƯA VẼ ĐẤT. Hãy vẽ một vùng màu vàng để đặt nhà!", true);
+            }
+
+            // GREENERY
+            if(data.greenery && data.greenery.length > 0) {
+                data.greenery.forEach(g => {
+                    const pts = g.nodes.map(n => project(n.lat, n.lon, center));
+                    const area = getPolygonArea(pts);
+                    if (area < MIN_GREENERY_AREA) return; 
+
+                    const shape = new THREE.Shape();
+                    shape.moveTo(pts[0].x, -pts[0].z); for(let i=1; i<pts.length; i++) shape.lineTo(pts[i].x, -pts[i].z);
+                    const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.2, bevelEnabled: false }); geo.rotateX(-Math.PI/2);
+                    const mat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 1.0, metalness: 0.0, clippingPlanes: globalClipPlanes, clipShadows: false });
+                    const mesh = new THREE.Mesh(geo, mat); 
+                    mesh.position.y = -0.05; mesh.receiveShadow = true; exportGroup.add(mesh);
+                });
+            }
+
+            // LAMP STRUCTURE (POLE + ARM)
+            const poleGeo = new THREE.CylinderGeometry(0.1, 0.15, 10, 5); poleGeo.translate(0, 5, 0); 
+            const armGeo = new THREE.BoxGeometry(0.2, 0.2, 2.5); armGeo.translate(1.2, 9.5, 0); 
+            const lampStructGeo = BufferGeometryUtils.mergeGeometries([poleGeo, armGeo]);
+            const lampMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.4, metalness: 0.8, clippingPlanes: globalClipPlanes });
+
+            // BULB (FOR LIGHT UP EFFECT)
+            const bulbGeo = new THREE.BoxGeometry(0.5, 0.2, 0.8); bulbGeo.translate(2.4, 9.2, 0);
+            bulbMat = new THREE.MeshStandardMaterial({ 
+                color: 0xffffff, 
+                emissive: 0xffff00, 
+                emissiveIntensity: 2.0, 
+                clippingPlanes: globalClipPlanes 
+            });
+
+            if (generatedLamps.length > 0) {
+                const structMesh = new THREE.InstancedMesh(lampStructGeo, lampMat, generatedLamps.length);
+                const bulbMesh = new THREE.InstancedMesh(bulbGeo, bulbMat, generatedLamps.length);
+                
+                structMesh.castShadow = true; structMesh.receiveShadow = true;
+                bulbMesh.castShadow = false; bulbMesh.receiveShadow = false;
+
+                const dum = new THREE.Object3D();
+                for(let i=0; i<generatedLamps.length; i++) {
+                    const l = generatedLamps[i];
+                    dum.position.set(l.pos.x, 0, l.pos.z);
+                    dum.lookAt(l.lookAt.x, 0, l.lookAt.z); 
+                    dum.updateMatrix();
+                    structMesh.setMatrixAt(i, dum.matrix);
+                    bulbMesh.setMatrixAt(i, dum.matrix);
+                }
+                exportGroup.add(structMesh);
+                exportGroup.add(bulbMesh);
+            }
+
+
+            // WATER (LAKES & RIVERS)
+            if(data.water && data.water.length > 0) {
+                data.water.forEach(w => {
+                    const pts = w.nodes.map(n => project(n.lat, n.lon, center));
+                    if (pts.length < 2) return;
+
+                    const isClosed = w.nodes[0].id === w.nodes[w.nodes.length-1].id;
+                    const isArea = w.tags.natural === 'water' || w.tags.water || isClosed;
+
+                    if (isArea) {
+                        const shape = new THREE.Shape();
+                        shape.moveTo(pts[0].x, -pts[0].z); 
+                        for(let i=1; i<pts.length; i++) shape.lineTo(pts[i].x, -pts[i].z);
+                        
+                        const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.1, bevelEnabled: false }); 
+                        geo.rotateX(-Math.PI/2);
+                        const mat = new THREE.MeshStandardMaterial({ color: 0xbae6fd, roughness: 0.1, metalness: 0.1, opacity: 0.6, transparent: true, clippingPlanes: globalClipPlanes, clipShadows: false });
+                        const mesh = new THREE.Mesh(geo, mat); 
+                        mesh.position.y = -0.4; 
+                        exportGroup.add(mesh);
+                    } else {
+                        let width = 10;
+                        if (w.tags.waterway === 'river') width = 20;
+                        else if (w.tags.waterway === 'canal') width = 15;
+                        else if (w.tags.waterway === 'stream') width = 5;
+
+                        const curvePts = pts.map(p => new THREE.Vector3(p.x, 0.1, p.z));
+                        const uniquePts = curvePts.filter((p, i) => i === 0 || p.distanceToSquared(curvePts[i - 1]) > 0.0001);
+                        if (uniquePts.length < 2) return;
+                        
+                        const curve = new THREE.CatmullRomCurve3(uniquePts);
+                        const len = curve.getLength();
+                        const segments = Math.max(8, Math.floor(len));
+                        
+                        const geo = createRibbonGeometry(curve, width, segments);
+                        const mat = new THREE.MeshStandardMaterial({ color: 0xbae6fd, roughness: 0.1, metalness: 0.1, opacity: 0.6, transparent: true, side: THREE.DoubleSide, clippingPlanes: globalClipPlanes, clipShadows: false });
+                        const mesh = new THREE.Mesh(geo, mat);
+                        mesh.position.y = -0.45; 
+                        exportGroup.add(mesh);
+                    }
+                });
+            }
+
+            // GROUND
+            const plane = new THREE.Mesh(new THREE.PlaneGeometry(FIXED_BOX_SIZE_METERS, FIXED_BOX_SIZE_METERS), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 1, clippingPlanes: globalClipPlanes, clipShadows: false })); 
+            plane.rotation.x = -Math.PI / 2; plane.position.y = -0.2; plane.receiveShadow = true;
+            scene.add(plane);
+            scene.add(exportGroup);
+            
+            const grid = new THREE.GridHelper(FIXED_BOX_SIZE_METERS, 20, 0x333333, 0x222222); grid.position.y = 0.1; scene.add(grid);
+            const borderGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(FIXED_BOX_SIZE_METERS, 2, FIXED_BOX_SIZE_METERS));
+            const borderMesh = new THREE.LineSegments(borderGeo, new THREE.LineBasicMaterial({ color: 0x3b82f6, opacity: 0.5, transparent: true })); borderMesh.position.y = 1; scene.add(borderMesh);
+
+            // OVERRIDE CAMERA IF CUSTOM LAND EXISTS
+            if (currentCustomCenter) {
+                // Focus camera on the custom land
+                controls.target.set(currentCustomCenter.x, 0, currentCustomCenter.z);
+                
+                // Position camera for a good view (e.g., Isometric-ish)
+                camera.position.set(currentCustomCenter.x, 60, currentCustomCenter.z + 80); 
+                controls.update();
+            }
+
+            animate();
+            document.getElementById('three-container').addEventListener('mousedown', () => controls.autoRotate = false);
+            window.addEventListener('resize', onResize);
+        }
+
+        function animate() {
+            animationId = requestAnimationFrame(animate);
+            controls.update();
+            if(window.TWEEN) window.TWEEN.update(); 
+            if (camera && controls) {
+                const forward = new THREE.Vector3(); camera.getWorldDirection(forward); forward.y = 0; forward.normalize();
+                const right = new THREE.Vector3(); right.crossVectors(forward, camera.up).normalize();
+                if (moveState.forward) { camera.position.addScaledVector(forward, MOVE_SPEED); controls.target.addScaledVector(forward, MOVE_SPEED); }
+                if (moveState.backward) { camera.position.addScaledVector(forward, -MOVE_SPEED); controls.target.addScaledVector(forward, -MOVE_SPEED); }
+                if (moveState.left) { camera.position.addScaledVector(right, -MOVE_SPEED); controls.target.addScaledVector(right, -MOVE_SPEED); }
+                if (moveState.right) { camera.position.addScaledVector(right, MOVE_SPEED); controls.target.addScaledVector(right, MOVE_SPEED); }
+                if (moveState.up) { camera.position.y += MOVE_SPEED; controls.target.y += MOVE_SPEED; }
+                if (moveState.down) { camera.position.y -= MOVE_SPEED; controls.target.y -= MOVE_SPEED; }
+                if (moveState.zoomIn) camera.position.addScaledVector(camera.getWorldDirection(new THREE.Vector3()), ZOOM_SPEED);
+                if (moveState.zoomOut) camera.position.addScaledVector(camera.getWorldDirection(new THREE.Vector3()), -ZOOM_SPEED);
+            }
+            renderer.render(scene, camera); 
+        }
+
+        function onResize() {
+            if(!camera) return;
+            const c = document.getElementById('three-container'); const w = c.clientWidth, h = c.clientHeight;
+            camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h); 
+        }
+
+        window.startMove = (dir) => { moveState[dir] = true; controls.autoRotate = false; };
+        window.stopMove = () => { Object.keys(moveState).forEach(key => moveState[key] = false); };
+        window.close3DView = () => { 
+            cancelAnimationFrame(animationId); 
+            document.getElementById('three-container').style.display = 'none'; 
+            document.getElementById('three-ui').classList.add('hidden'); 
+            document.getElementById('theme-ui').classList.add('hidden'); // HIDE THEME UI
+            document.getElementById('virtual-controller').classList.replace('block', 'hidden'); 
+            document.getElementById('help-ui').classList.add('hidden'); 
+            document.getElementById('map').style.display = 'block'; 
+            document.getElementById('map-ui').style.display = 'flex'; 
+            document.getElementById('map-import-ui').classList.remove('hidden'); 
+            document.getElementById('poi-popup').style.display = 'none'; 
+            setTimeout(() => { map.invalidateSize(); updateBoundingBoxVisual(); }, 100); 
+        };
+        window.exportToOBJ = () => { if(!exportGroup) return; const res = new OBJExporter().parse(exportGroup); const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([res], {type: 'text/plain'})); link.download = `OSM_Model_${Date.now()}.obj`; link.click(); };
+        window.resetCamera = () => { 
+            if(!camera || !controls) return; 
+            if(currentCustomCenter) {
+                 controls.target.set(currentCustomCenter.x, 0, currentCustomCenter.z);
+                 camera.position.set(currentCustomCenter.x, 60, currentCustomCenter.z + 80);
+            } else {
+                 controls.target.set(0,0,0); 
+                 camera.position.set(0,150,150); 
+            }
+            controls.update(); 
+        };
+        function showToast(m, e) { const t = document.getElementById('toast'); document.getElementById('toast-msg').innerText = m; t.className = `fixed top-6 left-1/2 -translate-x-1/2 z-[3000] transform transition-all duration-300 px-6 py-3 rounded-full shadow-2xl font-medium text-white flex items-center gap-2 backdrop-blur-md ${e?'bg-red-500/90':'bg-green-500/90'}`; t.classList.remove('-translate-y-20', 'opacity-0'); setTimeout(() => t.classList.add('-translate-y-20', 'opacity-0'), 4000); }
+    </script>
+</body>
+</html>

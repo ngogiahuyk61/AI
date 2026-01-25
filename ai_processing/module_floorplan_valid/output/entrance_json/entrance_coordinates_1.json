@@ -1,0 +1,20 @@
+{
+  "Entrance": {
+    "num": 1,
+    "coordinates": [
+      {
+        "center": [
+          687,
+          902
+        ],
+        "bounding_box": [
+          661,
+          897,
+          54,
+          10
+        ],
+        "area_pixels": 371.5
+      }
+    ]
+  }
+}

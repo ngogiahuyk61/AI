@@ -1,0 +1,10 @@
+{
+  "job_id": "20260112-135348",
+  "text_file": "source\\text_input\\floorplan-request-20260112-135348.json",
+  "description": "1 living room, 1 master room, 2 bathroom, 1 guest room, 1 study room, 1 storage, 1 balcony",
+  "total_area_m2": 100.0,
+  "queued_at": "20260112-135348",
+  "new_text_file": "source/new_text/20260112-135348.json",
+  "result_image": "source/result/20260112-135348.png",
+  "progress_percent": 60
+}

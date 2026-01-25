@@ -1,0 +1,36 @@
+<div class="space-y-4 animate-fade-in">
+    <div class="flex justify-between items-center">
+        <div class="flex gap-2">
+            <button class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Tất cả</button>
+            <button class="px-4 py-2 bg-transparent text-gray-500 hover:text-gray-700 text-sm">Đang xử lý</button>
+            <button class="px-4 py-2 bg-transparent text-gray-500 hover:text-gray-700 text-sm">Hoàn thành</button>
+        </div>
+        <button onclick="AICoreModule.newProject()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-lg shadow-blue-500/30 hover:bg-blue-700">
+            <i data-lucide="plus"></i> Dự án mới
+        </button>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden group cursor-pointer hover:shadow-md transition-all">
+            <div class="aspect-square bg-gray-100 relative">
+                <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&auto=format&fit=crop&q=60" class="w-full h-full object-cover" alt="AI Home">
+                <div class="absolute top-2 right-2 bg-green-500 text-white text-[10px] px-2 py-0.5 rounded-full">Ready</div>
+            </div>
+            <div class="p-3">
+                <h4 class="font-bold text-gray-800 text-sm truncate">Modern Villa v2</h4>
+                <p class="text-xs text-gray-500 mt-1">Updated 2m ago</p>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden group cursor-pointer">
+            <div class="aspect-square bg-gray-900 flex items-center justify-center relative">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                <p class="absolute bottom-4 text-white text-xs opacity-70">Rendering...</p>
+            </div>
+            <div class="p-3">
+                <h4 class="font-bold text-gray-800 text-sm truncate">Living Room Gen 4</h4>
+                <p class="text-xs text-gray-500 mt-1">Processing...</p>
+            </div>
+        </div>
+    </div>
+</div>

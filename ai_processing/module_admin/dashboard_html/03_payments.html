@@ -1,0 +1,31 @@
+<div class="space-y-6 animate-fade-in">
+    <div class="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg flex justify-between items-center">
+        <div>
+            <p class="text-slate-400 text-sm mb-1">Số dư khả dụng (Credits)</p>
+            <h2 class="text-4xl font-bold">2,450 <span class="text-lg text-slate-500 font-normal">AI Coins</span></h2>
+        </div>
+        <button onclick="PaymentsModule.addCredit()" class="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold hover:bg-blue-50 transition-colors flex items-center gap-2">
+            <i data-lucide="plus-circle" class="w-5 h-5"></i> Nạp thêm
+        </button>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="p-4 border-b border-gray-200 font-bold text-gray-700">Lịch sử giao dịch</div>
+        <div class="divide-y divide-gray-100">
+            <div class="p-4 flex justify-between items-center hover:bg-gray-50">
+                <div class="flex items-center gap-3">
+                    <div class="bg-green-100 p-2 rounded-full text-green-600"><i data-lucide="arrow-down-left" class="w-4 h-4"></i></div>
+                    <div><p class="font-medium text-sm">Nạp tiền qua Visa</p><p class="text-xs text-gray-500">20/12/2025 - 10:30 AM</p></div>
+                </div>
+                <span class="text-green-600 font-bold text-sm">+ $500.00</span>
+            </div>
+             <div class="p-4 flex justify-between items-center hover:bg-gray-50">
+                <div class="flex items-center gap-3">
+                    <div class="bg-red-100 p-2 rounded-full text-red-600"><i data-lucide="arrow-up-right" class="w-4 h-4"></i></div>
+                    <div><p class="font-medium text-sm">Trừ phí Render 3D</p><p class="text-xs text-gray-500">19/12/2025 - 04:15 PM</p></div>
+                </div>
+                <span class="text-red-600 font-bold text-sm">- 150 Credits</span>
+            </div>
+        </div>
+    </div>
+</div>

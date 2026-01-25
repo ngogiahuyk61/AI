@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAI Enterprise - Admin Dashboard</title>
+    
+    <!-- 1. Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- 3. OverlayScrollbars -->
+    <link type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/overlayscrollbars/2.3.0/styles/overlayscrollbars.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/overlayscrollbars/2.3.0/browser/overlayscrollbars.browser.es6.min.js"></script>
+
+    <!-- 4. Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        
+        /* Custom Scrollbar fallback */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+        /* Toast Animation */
+        .toast-enter { transform: translateX(100%); opacity: 0; }
+        .toast-enter-active { transform: translateX(0); opacity: 1; transition: all 300ms ease-out; }
+        
+        /* Auth Background */
+        .auth-bg {
+            background-color: #0f172a;
+            background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900 h-screen overflow-hidden">
+
+    <!-- Loading Spinner -->
+    <div id="app-loading" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white transition-opacity duration-500">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+        <p class="text-gray-500 text-sm font-medium">Đang kết nối hệ thống Clerk...</p>
+    </div>
+
+    <!-- Màn hình Chào mừng (Auth Landing) -->
+    <div id="auth-landing" class="hidden fixed inset-0 z-[90] flex items-center justify-center auth-bg">
+        <div class="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-md mx-4 text-center fade-in">
+            <div class="w-16 h-16 bg-blue-600 rounded-xl mx-auto flex items-center justify-center mb-6 shadow-lg shadow-blue-500/30">
+                <i data-lucide="shield-check" class="w-8 h-8 text-white"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">WebAI Admin</h1>
+            <p class="text-gray-500 mb-8">Hệ thống quản trị doanh nghiệp.</p>
+            
+            <!-- Cảnh báo môi trường -->
+            <div id="env-warning" class="hidden mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-left shadow-sm">
+                <div class="flex items-start gap-3">
+                    <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600 shrink-0 mt-0.5"></i>
+                    <div>
+                        <p class="text-sm text-yellow-800 font-bold mb-1">Môi trường hạn chế</p>
+                        <p class="text-xs text-yellow-700" id="env-warning-text">
+                            Trình duyệt đang chặn kết nối bảo mật đến Clerk. 
+                            <br>Hãy sử dụng <b>Chế độ Demo</b> để xem trước.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <button onclick="handleDemoClick()" id="btn-demo" class="w-full bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-3">
+                    <i data-lucide="play-circle" class="w-5 h-5 text-blue-600"></i>
+                    <span>Vào Dashboard Demo</span>
+                </button>
+
+                <button onclick="handleSignInClick()" id="btn-login-real" class="w-full bg-black text-white hover:bg-gray-800 font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3">
+                    <img src="https://img.clerk.com/static/logo-light.svg" alt="Clerk" class="h-5 grayscale brightness-200">
+                    <span>Đăng nhập Tài khoản thật</span>
+                </button>
+            </div>
+
+            <div class="mt-6 text-xs text-gray-400 border-t border-gray-100 pt-4 flex justify-between">
+                <span id="auth-status">Checking connection...</span>
+                <a href="#" class="hover:underline hover:text-blue-500">Hướng dẫn chạy thật</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD UI -->
+    <div id="dashboard-container" class="hidden h-full flex flex-col">
+        <div id="toast-container" class="fixed top-16 right-4 z-[70] flex flex-col gap-2"></div>
+
+        <div class="flex flex-1 overflow-hidden">
+            <!-- SIDEBAR -->
+            <aside id="sidebar" class="w-[300px] bg-slate-900 text-slate-300 flex flex-col transition-all duration-300 shrink-0 shadow-xl z-40 relative h-full">
+                <div class="h-16 flex items-center px-4 border-b border-slate-800 shrink-0 bg-slate-950 text-white shadow-sm gap-2 cursor-pointer hover:bg-slate-900 transition-colors" onclick="setActiveModule(3)">
+                    <div class="w-8 h-8 rounded bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white shrink-0">W</div>
+                    <div class="sidebar-text overflow-hidden">
+                        <div class="text-sm font-bold truncate">WebAI Corp</div>
+                        <div class="text-[10px] text-slate-400 truncate">Enterprise Workspace</div>
+                    </div>
+                </div>
+
+                <div id="sidebar-scroll-area" class="flex-1 overflow-y-auto py-4 custom-scroll">
+                    <div id="sidebar-menu" class="space-y-1"></div>
+                </div>
+
+                <div class="p-4 border-t border-slate-800 bg-slate-950 shrink-0">
+                    <button onclick="handleSignOutClick()" class="flex items-center gap-3 text-xs text-slate-500 hover:text-white w-full px-2 py-2 rounded transition-colors justify-center">
+                        <i data-lucide="log-out" class="w-3 h-3"></i> 
+                        <span class="sidebar-text">Đăng xuất</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- MAIN CONTENT -->
+            <div class="flex-1 flex flex-col min-w-0 bg-gray-50 h-full relative">
+                <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm shrink-0">
+                    <div class="flex items-center gap-4">
+                        <button onclick="toggleSidebar()" class="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors">
+                            <i data-lucide="menu" class="w-5 h-5"></i>
+                        </button>
+                        <div class="hidden sm:block">
+                            <h1 id="page-title" class="text-lg font-bold text-gray-800 leading-tight">Dashboard</h1>
+                            <p id="page-desc" class="text-xs text-gray-500">Quản trị hệ thống WebAI</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <div class="pl-2 border-l border-gray-200 flex items-center gap-3">
+                            <div class="text-right hidden md:block">
+                                <p class="text-sm font-bold text-gray-800" id="clerk-user-name">Guest</p>
+                                <p class="text-[10px] text-purple-600 font-bold uppercase tracking-wide bg-purple-50 px-2 py-0.5 rounded text-right" id="clerk-user-role">Administrator</p>
+                            </div>
+                            <div id="user-button-mount" class="w-8 h-8 rounded-full bg-gray-200"></div>
+                        </div>
+                    </div>
+                </header>
+
+                <main id="main-scroll-area" class="flex-1 p-4 sm:p-6 overflow-y-auto relative custom-scroll">
+                    <div id="content-area" class="max-w-7xl mx-auto h-full flex flex-col"></div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const MY_CLERK_KEY = 'pk_test_c2V0dGxpbmcta2l0dGVuLTEyLmNsZXJrLmFjY291bnRzLmRldiQ';
+
+        const safeOverlayScrollbars = (element, options) => {
+            if (typeof window.OverlayScrollbarsGlobal !== 'undefined' && window.OverlayScrollbarsGlobal.OverlayScrollbars) {
+                return window.OverlayScrollbarsGlobal.OverlayScrollbars(element, options);
+            }
+            element.classList.add('overflow-y-auto'); 
+            return null;
+        };
+
+        class MockClerk {
+            constructor() { this.user = null; this.isMock = true; }
+            async load() { return; } 
+            openSignIn() {
+                const mockUser = {
+                    id: "user_admin_demo",
+                    fullName: "Demo Admin",
+                    primaryEmailAddress: { emailAddress: "admin@webai.com" },
+                    imageUrl: "https://www.svgrepo.com/show/382099/female-avatar-girl-face-woman-user-2.svg"
+                };
+                this.user = mockUser;
+                handleLoginSuccess(mockUser, true);
+            }
+            signOut() { this.user = null; handleLogoutSuccess(); }
+            mountUserButton(el) {
+                if(!this.user) return;
+                el.innerHTML = `<div class="w-8 h-8 rounded-full bg-cover bg-center border-2 border-white shadow-sm cursor-pointer hover:ring-2 hover:ring-blue-500" style="background-image: url('${this.user.imageUrl}');" onclick="if(confirm('Thoát chế độ Demo?')) window.Clerk.signOut()"></div>`;
+            }
+        }
+
+        let isClerkRealLoaded = false;
+        const initApp = async () => {
+            if (window.location.protocol === 'file:') {
+                showEnvironmentWarning("Bạn đang chạy file trực tiếp. Clerk sẽ không hoạt động. Hãy dùng Live Server.");
+                updateAuthStatus('error');
+            }
+            try {
+                await loadScript("https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js", MY_CLERK_KEY);
+                if (typeof window.Clerk !== 'undefined') {
+                    const currentUrl = window.location.href;
+                    await window.Clerk.load({ signInForceRedirectUrl: currentUrl, signUpForceRedirectUrl: currentUrl });
+                    isClerkRealLoaded = true;
+                    if (window.Clerk.user) handleLoginSuccess(window.Clerk.user, false);
+                    else {
+                        updateAuthStatus('ready');
+                        document.getElementById('auth-landing').classList.remove('hidden');
+                    }
+                }
+            } catch (err) {
+                isClerkRealLoaded = false;
+                document.getElementById('auth-landing').classList.remove('hidden');
+                showEnvironmentWarning(`Môi trường Sandbox không hỗ trợ Clerk Auth. Vui lòng dùng nút "Vào Dashboard Demo".`);
+                updateAuthStatus('error');
+            } finally {
+                document.getElementById('app-loading').classList.add('hidden');
+            }
+        };
+
+        function showEnvironmentWarning(msg) {
+            const warningBox = document.getElementById('env-warning');
+            const warningText = document.getElementById('env-warning-text');
+            warningText.innerHTML = msg; 
+            warningBox.classList.remove('hidden');
+        }
+
+        function updateAuthStatus(status) {
+            const el = document.getElementById('auth-status');
+            if (status === 'ready') el.innerHTML = `<span class="text-green-600 font-medium">● Clerk Connected</span>`;
+            else el.innerHTML = `<span class="text-red-500 font-medium">● Connection Issue</span>`;
+        }
+
+        window.handleSignInClick = () => { if (isClerkRealLoaded && window.Clerk) window.Clerk.openSignIn(); else alert("Vui lòng dùng nút Demo."); };
+        window.handleDemoClick = () => { window.Clerk = new MockClerk(); window.Clerk.openSignIn(); };
+        window.handleSignOutClick = () => { if (window.Clerk) window.Clerk.signOut(); };
+
+        function handleLoginSuccess(user, isDemo) {
+            document.getElementById('auth-landing').classList.add('hidden');
+            document.getElementById('dashboard-container').classList.remove('hidden');
+            initDashboard(user, isDemo);
+        }
+
+        function handleLogoutSuccess() {
+            document.getElementById('dashboard-container').classList.add('hidden');
+            document.getElementById('auth-landing').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function loadScript(src, key) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement("script");
+                script.src = src; script.async = true; script.crossOrigin = "anonymous";
+                script.setAttribute('data-clerk-publishable-key', key);
+                script.onload = () => resolve(); script.onerror = () => reject();
+                document.body.appendChild(script);
+            });
+        }
+
+        let state = {
+            activeModuleId: 11,
+            sidebarOpen: true,
+            expandedGroups: { "1/ Người dùng": true, "4/ Dự án AI (CORE)": true }
+        };
+
+        const MODULE_GROUPS = [
+            { 
+                groupName: "1/ Người dùng", icon: "users", 
+                modules: [
+                    { id: 11, name: "Quản lý người dùng WebAI", icon: "user-cog", desc: "Quản lý danh sách, trạng thái và thông tin người dùng" },
+                    { id: 12, name: "Quản lý vai trò WebAI", icon: "shield-check", desc: "Phân quyền và quản lý vai trò trong hệ thống" },
+                    { id: 13, name: "Quản lý workspace", icon: "briefcase", desc: "Quản lý các không gian làm việc của doanh nghiệp" }
+                ]
+            },
+            { 
+                groupName: "2/ Gói dịch vụ", icon: "package", 
+                modules: [
+                    { id: 21, name: "Quản lý gói dịch vụ AI", icon: "layers", desc: "Cấu hình các gói Free, Pro, Enterprise" },
+                    { id: 22, name: "Quản lý đăng ký gói", icon: "calendar-check", desc: "Theo dõi tình trạng đăng ký của khách hàng" }
+                ]
+            },
+            { 
+                groupName: "3/ Thanh toán", icon: "credit-card", 
+                modules: [
+                    { id: 31, name: "Quản lý tín dụng AI", icon: "coins", desc: "Quản lý số dư Credit và nạp tiền" },
+                    { id: 32, name: "Quản lý chi phí AI", icon: "bar-chart-3", desc: "Thống kê chi phí sử dụng theo thời gian" },
+                    { id: 33, name: "Quản lý hóa đơn AI", icon: "file-text", desc: "Quản lý và xuất hóa đơn dịch vụ" }
+                ]
+            },
+            { 
+                groupName: "4/ Dự án AI (CORE)", icon: "zap", 
+                modules: [
+                    { id: 41, name: "Quản lý dự án AI", icon: "folder-kanban", desc: "Quản trị các dự án AI đang triển khai" },
+                    { id: 42, name: "Quản lý bản vẽ AI", icon: "pen-tool", desc: "Quản lý tài sản bản vẽ và thiết kế AI" },
+                    { id: 43, name: "Quản lý phiên bản thiết kế", icon: "git-branch", desc: "Theo dõi các phiên bản của thiết kế" },
+                    { id: 44, name: "Quản lý lịch sử AI", icon: "history", desc: "Tra cứu lịch sử thao tác và kết quả AI" },
+                    { id: 45, name: "Quản lý trạng thái thiết kế", icon: "activity", desc: "Cập nhật tiến độ và trạng thái bản vẽ" }
+                ]
+            },
+            { 
+                groupName: "5/ Sử dụng", icon: "gauge", 
+                modules: [
+                    { id: 51, name: "Quản lý mức sử dụng AI", icon: "line-chart", desc: "Theo dõi hiệu năng và lưu lượng sử dụng" },
+                    { id: 52, name: "Quản lý giới hạn sử dụng", icon: "lock", desc: "Cài đặt giới hạn (Quota) cho từng User/Workspace" }
+                ]
+            },
+            { 
+                groupName: "6/ Feedback", icon: "message-square", 
+                modules: [
+                    { id: 61, name: "Quản lý phản hồi AI", icon: "message-circle", desc: "Tiếp nhận và xử lý góp ý từ người dùng" },
+                    { id: 62, name: "Quản lý đánh giá AI", icon: "star", desc: "Quản lý các đánh giá chất lượng kết quả AI" }
+                ]
+            },
+            { 
+                groupName: "7/ Thông báo", icon: "bell", 
+                modules: [
+                    { id: 71, name: "Quản lý thông báo AI", icon: "mail", desc: "Hệ thống thông báo đẩy và email" },
+                    { id: 72, name: "Quản lý cảnh báo gói", icon: "alert-circle", desc: "Cảnh báo khi sắp hết hạn hoặc hết tín dụng" }
+                ]
+            },
+            { 
+                groupName: "8/ Thống Kê", icon: "pie-chart", 
+                modules: [
+                    { id: 81, name: "Quản lý thống kê AI", icon: "trending-up", desc: "Báo cáo tổng hợp và phân tích dữ liệu" }
+                ]
+            },
+            { 
+                groupName: "9/ Tích hợp", icon: "plug", 
+                modules: [
+                    { id: 91, name: "Quản lý kết nối ERP", icon: "database", desc: "Quản lý đồng bộ dữ liệu với hệ thống ERP" },
+                    { id: 92, name: "Quản lý gửi báo giá AI", icon: "send", desc: "Hệ thống tự động tạo và gửi báo giá" }
+                ]
+            },
+            { 
+                groupName: "10/ Hệ Thống", icon: "settings", 
+                modules: [
+                    { id: 1001, name: "Quản lý nhật ký AI", icon: "terminal", desc: "Ghi nhật ký hệ thống (System Logs)" },
+                    { id: 1002, name: "Quản lý bảo mật WebAI", icon: "key", desc: "Cài đặt bảo mật, API Keys và xác thực" }
+                ]
+            }
+        ];
+
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            state.sidebarOpen = !state.sidebarOpen;
+            sb.style.width = state.sidebarOpen ? '300px' : '64px';
+            document.querySelectorAll('.sidebar-text').forEach(t => t.style.display = state.sidebarOpen ? 'block' : 'none');
+        }
+
+        function toggleGroup(groupName) {
+            state.expandedGroups[groupName] = !state.expandedGroups[groupName];
+            renderSidebar();
+        }
+
+        function setActiveModule(id) {
+            state.activeModuleId = id;
+            renderSidebar();
+            renderView();
+        }
+
+        function renderSidebar() {
+            const container = document.getElementById('sidebar-menu');
+            let html = '';
+            MODULE_GROUPS.forEach(group => {
+                const isExpanded = state.expandedGroups[group.groupName];
+                html += `
+                    <div class="mb-1">
+                        <div onclick="toggleGroup('${group.groupName}')" class="flex items-center justify-between px-4 py-2.5 cursor-pointer text-xs font-bold text-slate-500 uppercase tracking-wider hover:text-white transition-colors group select-none">
+                            <span class="flex items-center gap-3"><i data-lucide="${group.icon}" class="w-4 h-4"></i><span class="sidebar-text">${group.groupName}</span></span>
+                            <i data-lucide="${isExpanded ? 'chevron-down' : 'chevron-right'}" class="w-3 h-3 sidebar-text"></i>
+                        </div>
+                        <div class="space-y-0.5 overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}">
+                            ${group.modules.map(mod => `
+                                <div onclick="setActiveModule(${mod.id})" class="flex items-center gap-3 px-4 py-2 text-sm cursor-pointer border-l-4 transition-all pl-6 ${state.activeModuleId === mod.id ? 'border-blue-500 bg-slate-800 text-white font-medium' : 'border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200'}">
+                                    <i data-lucide="${mod.icon}" class="w-4 h-4 shrink-0"></i>
+                                    <span class="sidebar-text truncate" title="${mod.name}">${mod.name}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>`;
+            });
+            container.innerHTML = html;
+            lucide.createIcons();
+            if (!state.sidebarOpen) document.querySelectorAll('.sidebar-text').forEach(t => t.style.display = 'none');
+        }
+
+        function renderView() {
+            const mod = MODULE_GROUPS.flatMap(g => g.modules).find(m => m.id === state.activeModuleId);
+            document.getElementById('page-title').innerText = mod.name;
+            document.getElementById('page-desc').innerText = mod.desc;
+            const area = document.getElementById('content-area');
+            area.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-400 bg-white rounded-xl border border-gray-200 border-dashed m-4 px-6 text-center"><i data-lucide="${mod.icon}" class="w-16 h-16 mb-4 opacity-20 text-blue-600"></i><h2 class="text-xl font-bold text-gray-700">${mod.name}</h2><p class="text-gray-500 mt-2 max-w-md">${mod.desc}</p><div class="mt-8 p-4 bg-blue-50 text-blue-700 rounded-lg text-sm border border-blue-100 italic">Tính năng này hiện đang được tích hợp vào dữ liệu thực tế...</div></div>`;
+            lucide.createIcons();
+        }
+
+        function initDashboard(clerkUser, isDemo) {
+            document.getElementById('clerk-user-name').innerText = clerkUser.fullName || "User";
+            document.getElementById('clerk-user-role').innerText = isDemo ? "Demo Admin" : "Full Access";
+            if (document.getElementById('user-button-mount')) window.Clerk.mountUserButton(document.getElementById('user-button-mount'));
+            safeOverlayScrollbars(document.getElementById('sidebar-scroll-area'), { scrollbars: { theme: 'os-theme-dark' } });
+            safeOverlayScrollbars(document.getElementById('main-scroll-area'), { scrollbars: { theme: 'os-theme-dark' } });
+            renderSidebar();
+            renderView();
+            showToast(isDemo ? "Sử dụng chế độ Demo." : "Đăng nhập thành công!", "success");
+        }
+
+        function showToast(msg, type) {
+            const container = document.getElementById('toast-container');
+            const div = document.createElement('div');
+            div.className = `toast ${type === 'success' ? 'bg-green-600' : 'bg-blue-600'} text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 min-w-[250px] toast-enter`;
+            div.innerHTML = `<span class="text-sm font-medium">${msg}</span>`;
+            container.appendChild(div);
+            setTimeout(() => { div.classList.remove('toast-enter'); div.classList.add('toast-enter-active'); }, 10);
+            setTimeout(() => div.remove(), 3000);
+        }
+
+        initApp();
+    </script>
+</body>
+</html>

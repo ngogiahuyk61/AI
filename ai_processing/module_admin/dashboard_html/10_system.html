@@ -1,0 +1,27 @@
+<div class="animate-fade-in space-y-4">
+    <div class="bg-slate-950 text-green-400 p-4 rounded-xl font-mono text-xs h-64 overflow-y-auto custom-scroll shadow-inner">
+        <div class="flex gap-4 border-b border-slate-800 pb-2 mb-2 text-slate-500 font-bold sticky top-0 bg-slate-950">
+            <span class="w-20">TIME</span>
+            <span class="w-20">LEVEL</span>
+            <span>MESSAGE</span>
+        </div>
+        <div class="space-y-1" id="log-container">
+            <div class="flex gap-4"><span class="text-slate-500 w-20">10:00:01</span><span class="text-blue-400 w-20">INFO</span><span>System booted successfully.</span></div>
+            <div class="flex gap-4"><span class="text-slate-500 w-20">10:01:23</span><span class="text-yellow-400 w-20">WARN</span><span>Memory usage at 65%.</span></div>
+            <div class="flex gap-4"><span class="text-slate-500 w-20">10:05:45</span><span class="text-blue-400 w-20">INFO</span><span>User 'admin' logged in.</span></div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+        <button onclick="SystemModule.clearCache()" class="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left">
+            <i data-lucide="database" class="w-6 h-6 text-gray-600 mb-2"></i>
+            <h4 class="font-bold text-gray-800">Xóa Cache</h4>
+            <p class="text-xs text-gray-500">Giải phóng bộ nhớ tạm</p>
+        </button>
+        <button class="p-4 bg-white border border-red-200 rounded-xl hover:bg-red-50 text-left group">
+            <i data-lucide="shield-alert" class="w-6 h-6 text-red-600 mb-2 group-hover:animate-pulse"></i>
+            <h4 class="font-bold text-red-600">Bảo trì khẩn cấp</h4>
+            <p class="text-xs text-red-400">Kích hoạt chế độ Maintenance</p>
+        </button>
+    </div>
+</div>

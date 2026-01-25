@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Concept Studio 3D - Smart Tour</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    
+    <!-- Three.js Import Map -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+                "@tweenjs/tween.js": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/tween.module.js"
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --secondary-color: #1f2937;
+            --text-color: #f3f4f6;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: var(--text-color);
+            min-height: 100vh;
+        }
+        .container-card {
+            background-color: var(--secondary-color);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+        
+        .chat-input-container {
+            background-color: #374151;
+            border: 1px solid #4b5563;
+            transition: border-color 0.2s;
+        }
+        .chat-input-container:focus-within {
+            border-color: var(--primary-color);
+            ring: 2px solid var(--primary-color);
+        }
+
+        .loading-spinner {
+            border-top-color: var(--primary-color);
+            border-right-color: transparent;
+            border-bottom-color: var(--primary-color);
+            border-left-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+
+        /* Hotspot Styles */
+        .hotspot {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            background-color: #3b82f6; 
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: grab;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            transform: translate(-50%, -50%); 
+            transition: transform 0.1s, background-color 0.2s;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+        }
+        .hotspot:active { cursor: grabbing; transform: translate(-50%, -50%) scale(1.1); }
+        .hotspot:hover { z-index: 30; transform: translate(-50%, -50%) scale(1.2); }
+        .hotspot.ready { background-color: #10b981; border-color: #d1fae5; }
+        .hotspot.loading { background-color: #f59e0b; animation: pulse-orange 1.5s infinite; }
+        .hotspot.active-view { background-color: #f43f5e; border-color: #fff; transform: translate(-50%, -50%) scale(1.3); z-index: 40; box-shadow: 0 0 15px #f43f5e; }
+
+        @keyframes pulse-orange {
+            0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+
+        /* 3D Viewer Controls */
+        .room-btn {
+            transition: all 0.2s;
+        }
+        .room-btn:hover { background-color: #374151; }
+        .room-btn.active { background-color: #312e81; border-color: #6366f1; }
+
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .status-dot.pending { background-color: #9ca3af; }
+        .status-dot.loading { background-color: #f59e0b; animation: blink 1s infinite; }
+        .status-dot.ready { background-color: #10b981; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        /* Progress Bar */
+        #globalProgressBar { transition: width 0.3s ease-out; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col overflow-hidden">
+
+    <!-- Header / Navbar -->
+    <div class="bg-gray-800 border-b border-gray-700 p-4 shadow-md z-10">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl md:text-2xl font-bold flex items-center gap-2">
+                <span class="text-indigo-500">AI Concept Studio</span> 3D Tour
+                <span class="text-xs bg-gray-700 text-green-400 px-2 py-0.5 rounded border border-green-500/30">Auto-LDK</span>
+            </h1>
+            <div id="globalProgressContainer" class="hidden w-64 h-2 bg-gray-700 rounded-full overflow-hidden ml-4">
+                <div id="globalProgressBar" class="h-full bg-gradient-to-r from-indigo-500 to-green-400 w-0"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="flex flex-1 overflow-hidden relative">
+        
+        <!-- SIDEBAR (Left): Input + Map + List -->
+        <div id="sidebar" class="w-full md:w-[400px] bg-gray-800 border-r border-gray-700 flex flex-col z-20 shadow-xl transition-transform duration-300">
+            
+            <!-- 1. Input Section (Compact) -->
+            <div class="p-4 border-b border-gray-700 space-y-3">
+                <div class="chat-input-container rounded-xl overflow-hidden bg-gray-900 border border-gray-600">
+                    <!-- Preview Area -->
+                    <div id="imagePreviewContainer" class="hidden p-2 border-b border-gray-700 bg-gray-800/50">
+                        <div id="previewList" class="flex gap-2 overflow-x-auto pb-1 preview-scroll h-16"></div>
+                    </div>
+                    
+                    <div class="flex items-center p-2 gap-2">
+                        <button id="attachBtn" class="text-gray-400 hover:text-indigo-400 p-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            <input type="file" id="fileInput" class="hidden" accept="image/*" multiple>
+                        </button>
+                        <textarea id="promptInput" rows="1" class="flex-1 bg-transparent border-none text-sm text-white focus:ring-0 p-1 max-h-20" placeholder="Nhập danh sách phòng..."></textarea>
+                        <button id="generateBtn" class="bg-indigo-600 text-white rounded-lg p-2 hover:bg-indigo-500 transition disabled:opacity-50">
+                            <svg id="sendIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
+                            <div id="loadingIndicator" class="hidden loading-spinner w-5 h-5 border-2 rounded-full"></div>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex justify-between text-xs text-gray-500">
+                    <span id="statusText">Sẵn sàng</span>
+                    <span id="queueStatus"></span>
+                </div>
+            </div>
+
+            <!-- 2. 2D Map Area -->
+            <div class="flex-1 flex flex-col min-h-0">
+                <div class="bg-gray-900 p-2 border-b border-gray-700">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Vị trí phòng (Kéo để chỉnh)</h3>
+                    <div class="relative w-full aspect-square bg-black rounded-lg overflow-hidden border border-gray-700 shadow-inner group">
+                        <div id="mapContainer" class="relative w-full h-full cursor-crosshair">
+                            <img id="floorPlanImage" class="w-full h-full object-contain opacity-80 transition-opacity duration-300 group-hover:opacity-100" draggable="false">
+                            <div id="hotspotsLayer" class="absolute inset-0"></div>
+                            
+                            <!-- Map Loading Overlay -->
+                            <div id="mapLoadingOverlay" class="absolute inset-0 bg-gray-900/80 flex flex-col items-center justify-center z-10 hidden">
+                                <div class="loading-spinner w-8 h-8 border-2 rounded-full mb-2"></div>
+                                <span class="text-xs text-indigo-300">Đang phân tích...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Room List -->
+                <div class="flex-1 overflow-y-auto p-4 bg-gray-800">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Danh sách phòng</h3>
+                    <div id="roomButtonsContainer" class="space-y-2">
+                        <!-- Room buttons injected here -->
+                        <div class="text-center text-gray-600 text-sm py-4 italic">Chưa có dữ liệu phòng</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN VIEW (Right): 3D Panorama -->
+        <div class="flex-1 relative bg-black">
+            <!-- 3D Canvas -->
+            <div id="panoramaContainer" class="absolute inset-0 w-full h-full cursor-move"></div>
+
+            <!-- Overlay Controls -->
+            <div class="absolute top-6 left-6 z-10 pointer-events-none">
+                <h2 id="currentRoomTitle" class="text-3xl font-bold text-white drop-shadow-lg opacity-0 transition-opacity duration-500"></h2>
+                <p id="currentRoomPrompt" class="text-sm text-gray-300 drop-shadow-md max-w-md line-clamp-2 opacity-0 transition-opacity duration-500 delay-100"></p>
+            </div>
+
+            <!-- Welcome/Empty State -->
+            <div id="welcomeState" class="absolute inset-0 flex items-center justify-center bg-gray-900/90 z-20">
+                <div class="text-center p-8 max-w-lg">
+                    <div class="w-20 h-20 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-6 text-indigo-400">
+                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-2">Bắt đầu Tour 3D</h2>
+                    <p class="text-gray-400">Tải lên bản vẽ 2D ở cột bên trái để bắt đầu. Hệ thống sẽ tự động tạo không gian 3D cho phòng khách đầu tiên.</p>
+                </div>
+            </div>
+
+            <!-- Loading 3D Overlay -->
+            <div id="viewerLoading" class="absolute inset-0 flex items-center justify-center bg-black/80 z-30 hidden backdrop-blur-sm transition-opacity duration-300">
+                <div class="text-center">
+                    <div class="loading-spinner w-12 h-12 border-4 rounded-full mx-auto mb-4 border-t-indigo-500"></div>
+                    <p class="text-indigo-400 font-bold tracking-widest uppercase text-sm">Đang tải 3D...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Toast -->
+    <div id="errorBox" class="fixed bottom-6 right-6 max-w-sm bg-red-900/90 text-white p-4 rounded-lg shadow-xl border border-red-700 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-red-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div>
+                <h4 class="font-bold text-sm">Lỗi</h4>
+                <p id="errorMessage" class="text-xs text-red-200 mt-1"></p>
+            </div>
+            <button onclick="hideError()" class="text-red-400 hover:text-white ml-auto">✕</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import TWEEN from '@tweenjs/tween.js';
+
+        // --- CONFIGURATION ---
+        const API_KEY = "";
+        const VISION_MODEL = "gemini-2.5-flash-preview-09-2025";
+        const MAX_CONCURRENCY = 4;
+
+        // --- STATE ---
+        let selectedBase64Images = []; 
+        let roomDataCache = []; 
+        let currentDragElement = null;
+        let activeRoomIndex = -1;
+        
+        // Three.js
+        let scene, camera, renderer, controls, sphere;
+        let is3DInitialized = false;
+
+        // --- UI REFS ---
+        const els = {
+            promptInput: document.getElementById('promptInput'),
+            generateBtn: document.getElementById('generateBtn'),
+            fileInput: document.getElementById('fileInput'),
+            attachBtn: document.getElementById('attachBtn'),
+            imagePreviewContainer: document.getElementById('imagePreviewContainer'),
+            previewList: document.getElementById('previewList'),
+            floorPlanImage: document.getElementById('floorPlanImage'),
+            hotspotsLayer: document.getElementById('hotspotsLayer'),
+            mapContainer: document.getElementById('mapContainer'),
+            roomButtonsContainer: document.getElementById('roomButtonsContainer'),
+            mapLoadingOverlay: document.getElementById('mapLoadingOverlay'),
+            globalProgressContainer: document.getElementById('globalProgressContainer'),
+            globalProgressBar: document.getElementById('globalProgressBar'),
+            statusText: document.getElementById('statusText'),
+            queueStatus: document.getElementById('queueStatus'),
+            panoramaContainer: document.getElementById('panoramaContainer'),
+            welcomeState: document.getElementById('welcomeState'),
+            viewerLoading: document.getElementById('viewerLoading'),
+            currentRoomTitle: document.getElementById('currentRoomTitle'),
+            currentRoomPrompt: document.getElementById('currentRoomPrompt'),
+            errorBox: document.getElementById('errorBox'),
+            errorMessage: document.getElementById('errorMessage'),
+            loadingIndicator: document.getElementById('loadingIndicator'),
+            sendIcon: document.getElementById('sendIcon')
+        };
+
+        // --- INIT AUTH ---
+        try {
+            const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+            if (Object.keys(firebaseConfig).length > 0) {
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                signInAnonymously(auth);
+            }
+        } catch (e) { console.warn("Firebase skipped"); }
+
+        // --- QUEUE SYSTEM ---
+        class RequestQueue {
+            constructor(concurrency) {
+                this.concurrency = concurrency;
+                this.running = 0;
+                this.queue = [];
+                this.totalTasks = 0;
+                this.completedTasks = 0;
+            }
+            add(fn) {
+                return new Promise((resolve, reject) => {
+                    this.queue.push({ fn, resolve, reject });
+                    this.next();
+                });
+            }
+            next() {
+                this.updateUI();
+                if (this.running >= this.concurrency || this.queue.length === 0) return;
+                const { fn, resolve, reject } = this.queue.shift();
+                this.running++;
+                this.updateUI();
+                fn().then(val => { resolve(val); this.completedTasks++; })
+                    .catch(err => { reject(err); this.completedTasks++; })
+                    .finally(() => { this.running--; this.next(); });
+            }
+            reset(total) {
+                this.totalTasks = total;
+                this.completedTasks = 0;
+                this.queue = [];
+                this.running = 0;
+                this.updateUI();
+            }
+            updateUI() {
+                if (this.totalTasks > 0) {
+                    const pct = (this.completedTasks / this.totalTasks) * 100;
+                    els.globalProgressBar.style.width = `${pct}%`;
+                    els.globalProgressContainer.classList.remove('hidden');
+                    if (this.completedTasks === this.totalTasks) {
+                         setTimeout(() => els.globalProgressContainer.classList.add('hidden'), 1000);
+                    }
+                }
+                els.queueStatus.innerText = `Xử lý: ${this.running}/${this.concurrency}`;
+            }
+        }
+        const processingQueue = new RequestQueue(MAX_CONCURRENCY);
+
+        // --- FILE INPUT HANDLING ---
+        els.attachBtn.addEventListener('click', () => els.fileInput.click());
+        els.fileInput.addEventListener('change', (e) => handleFiles(Array.from(e.target.files)));
+        els.promptInput.addEventListener('paste', (e) => {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (const item of items) {
+                if (item.type.indexOf("image") !== -1) {
+                    const blob = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = (ev) => addImageToQueue(ev.target.result);
+                    reader.readAsDataURL(blob);
+                }
+            }
+        });
+
+        function handleFiles(files) {
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => addImageToQueue(e.target.result);
+                reader.readAsDataURL(file);
+            });
+            els.fileInput.value = '';
+        }
+
+        function addImageToQueue(dataUrl) {
+            const b64 = dataUrl.split(',')[1];
+            selectedBase64Images.push(b64);
+            renderPreviews();
+        }
+
+        function renderPreviews() {
+            if (selectedBase64Images.length === 0) {
+                els.imagePreviewContainer.classList.add('hidden');
+                return;
+            }
+            els.imagePreviewContainer.classList.remove('hidden');
+            els.previewList.innerHTML = '';
+            selectedBase64Images.forEach((b64, index) => {
+                const img = document.createElement('img');
+                img.src = `data:image/png;base64,${b64}`;
+                img.className = "h-full w-auto rounded border border-gray-600 object-cover";
+                els.previewList.appendChild(img);
+            });
+        }
+
+        // --- API FUNCTIONS ---
+        async function fetchAI(url, payload) {
+            let lastError;
+            for(let i = 0; i < 5; i++) { 
+                try {
+                    const res = await fetch(url + API_KEY, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (res.status === 503 || res.status === 429) throw new Error(`Server busy (${res.status})`);
+                    const text = await res.text();
+                    if (!res.ok) throw new Error(`API Error ${res.status}`);
+                    return JSON.parse(text);
+                } catch (e) {
+                    lastError = e;
+                    await new Promise(r => setTimeout(r, (1000 * Math.pow(2, i)) + Math.random() * 500));
+                }
+            }
+            throw lastError;
+        }
+
+        async function analyzeInputs(text, images) {
+            const promptText = `Act as a Technical Architectural Analyst. 
+            Analyze the provided 2D Floor Plan and user input: "${text}".
+            Identify rooms. IMPORTANT: If 'LDK', 'Living Room', or 'Phòng Khách' is found, place it FIRST in the list.
+            OUTPUT FORMAT (One room per line, separated by |||):
+            ROOM: [Name] :: POS: [x,y] :: PROMPT: [Detailed prompt]
+            |||
+            ROOM: [Name] :: POS: [x,y] :: PROMPT: [Detailed prompt]`;
+
+            const parts = [{ text: promptText }];
+            if (images.length > 0) parts.push({ inlineData: { mimeType: "image/png", data: images[0] } });
+
+            const data = await fetchAI(`https://generativelanguage.googleapis.com/v1beta/models/${VISION_MODEL}:generateContent?key=`, { contents: [{ parts }] });
+            return data.candidates[0].content.parts[0].text;
+        }
+
+        function scheduleImageGeneration(index) {
+            const room = roomDataCache[index];
+            if (room.image3d || room.status === 'loading') return Promise.resolve();
+
+            room.status = 'loading';
+            updateRoomStatusUI(index);
+
+            return processingQueue.add(async () => {
+                try {
+                    const panoramaPrompt = `Equirectangular 360 degree panorama view, bright and airy, sunlit, ultra high definition, 8k resolution, photorealistic, razor sharp focus, crystal clear details, professional interior architecture photography, cinematic lighting, high key lighting, neutral color balance, no dark shadows: ${room.prompt}`;
+                    
+                    const data = await fetchAI(
+                        `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=`, 
+                        { instances: [{ prompt: panoramaPrompt }], parameters: { sampleCount: 1 } }
+                    );
+
+                    const b64 = data.predictions?.[0]?.bytesBase64Encoded;
+                    if (!b64) throw new Error("No image data");
+
+                    room.image3d = b64;
+                    room.status = 'ready';
+                    updateRoomStatusUI(index);
+                    
+                    // If this is the active room (e.g. waiting on load), refresh view
+                    if (index === activeRoomIndex) {
+                        transitionTexture(b64);
+                    }
+                    return b64;
+                } catch (e) {
+                    console.error(`Gen failed for room ${index}`, e);
+                    room.status = 'error';
+                    updateRoomStatusUI(index);
+                    return null;
+                }
+            });
+        }
+
+        function updateRoomStatusUI(index) {
+            const room = roomDataCache[index];
+            const btn = document.getElementById(`room-btn-${index}`);
+            const hotspot = document.getElementById(`hotspot-${index}`);
+            if (!btn || !hotspot) return;
+
+            const dot = btn.querySelector('.status-dot');
+            dot.className = 'status-dot';
+            hotspot.classList.remove('loading', 'ready', 'active-view');
+
+            if (index === activeRoomIndex) {
+                btn.classList.add('active');
+                hotspot.classList.add('active-view');
+            } else {
+                btn.classList.remove('active');
+            }
+
+            if (room.status === 'loading') {
+                dot.classList.add('loading');
+                hotspot.classList.add('loading');
+            } else if (room.status === 'ready') {
+                dot.classList.add('ready');
+                hotspot.classList.add('ready');
+            } else {
+                dot.classList.add('pending');
+            }
+        }
+
+        // --- MAP & DRAG ---
+        function renderUI() {
+            els.hotspotsLayer.innerHTML = '';
+            els.roomButtonsContainer.innerHTML = '';
+            
+            roomDataCache.forEach((room, index) => {
+                // Hotspot
+                const dot = document.createElement('div');
+                dot.id = `hotspot-${index}`;
+                dot.className = 'hotspot';
+                dot.style.left = `${room.x}%`;
+                dot.style.top = `${room.y}%`;
+                dot.innerHTML = `<span>${index + 1}</span>`;
+                dot.title = room.name;
+                setupDraggable(dot, index);
+                els.hotspotsLayer.appendChild(dot);
+
+                // Button
+                const btn = document.createElement('button');
+                btn.id = `room-btn-${index}`;
+                btn.className = 'room-btn w-full text-left px-3 py-2 bg-gray-700 rounded-lg text-sm text-gray-200 border border-gray-600 flex items-center gap-2 group';
+                btn.innerHTML = `
+                    <span class="status-dot pending"></span>
+                    <span class="bg-gray-600 text-xs w-5 h-5 rounded flex items-center justify-center font-bold group-hover:bg-gray-500">${index + 1}</span> 
+                    <span class="truncate font-medium">${room.name}</span>
+                `;
+                btn.onclick = () => switchToRoom(index);
+                els.roomButtonsContainer.appendChild(btn);
+            });
+        }
+
+        function setupDraggable(element, index) {
+            let isDragging = false;
+            element.addEventListener('mousedown', (e) => {
+                isDragging = false; 
+                currentDragElement = { el: element, index, startX: e.clientX, startY: e.clientY };
+                element.style.cursor = 'grabbing';
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (!currentDragElement || currentDragElement.index !== index) return;
+                const dist = Math.sqrt(Math.pow(e.clientX - currentDragElement.startX, 2) + Math.pow(e.clientY - currentDragElement.startY, 2));
+                if (dist > 3) isDragging = true;
+                
+                const rect = els.mapContainer.getBoundingClientRect();
+                let x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+                let y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+                const xPct = (x / rect.width) * 100;
+                const yPct = (y / rect.height) * 100;
+                
+                element.style.left = `${xPct}%`;
+                element.style.top = `${yPct}%`;
+                roomDataCache[index].x = xPct;
+                roomDataCache[index].y = yPct;
+            });
+            window.addEventListener('mouseup', (e) => {
+                if (currentDragElement && currentDragElement.index === index) {
+                    element.style.cursor = 'grab';
+                    if (!isDragging) switchToRoom(index);
+                    currentDragElement = null;
+                    isDragging = false;
+                }
+            });
+        }
+
+        // --- 3D LOGIC ---
+        function init3D() {
+            if (is3DInitialized) return;
+            
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, els.panoramaContainer.clientWidth / els.panoramaContainer.clientHeight, 0.1, 1000);
+            camera.position.set(0, 0, 0.1); 
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(els.panoramaContainer.clientWidth, els.panoramaContainer.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            renderer.toneMapping = THREE.NoToneMapping; 
+            
+            els.panoramaContainer.appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableZoom = false; 
+            controls.enableDamping = true;
+            controls.rotateSpeed = -0.3;
+
+            // FOV Zoom
+            els.panoramaContainer.addEventListener('wheel', (e) => {
+                camera.fov = THREE.MathUtils.clamp(camera.fov + e.deltaY * 0.05, 30, 100);
+                camera.updateProjectionMatrix();
+            }, { passive: true });
+
+            const geometry = new THREE.SphereGeometry(500, 60, 40);
+            geometry.scale(-1, 1, 1);
+            sphere = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0x111111 })); 
+            scene.add(sphere);
+
+            window.addEventListener('resize', () => {
+                camera.aspect = els.panoramaContainer.clientWidth / els.panoramaContainer.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(els.panoramaContainer.clientWidth, els.panoramaContainer.clientHeight);
+            });
+            
+            is3DInitialized = true;
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if(controls) controls.update();
+            TWEEN.update();
+            if(renderer) renderer.render(scene, camera);
+        }
+
+        function switchToRoom(index) {
+            if (index === activeRoomIndex && roomDataCache[index].image3d) return;
+            
+            // Update Active UI
+            const prevIndex = activeRoomIndex;
+            activeRoomIndex = index;
+            if(prevIndex !== -1) updateRoomStatusUI(prevIndex);
+            updateRoomStatusUI(index);
+
+            // Hide Welcome
+            els.welcomeState.classList.add('hidden');
+            
+            // Update Titles
+            const room = roomDataCache[index];
+            els.currentRoomTitle.innerText = room.name;
+            els.currentRoomTitle.style.opacity = 1;
+            els.currentRoomPrompt.innerText = room.prompt;
+            els.currentRoomPrompt.style.opacity = 1;
+
+            // Init 3D if needed
+            if (!is3DInitialized) init3D();
+
+            // Handle Image Loading
+            if (room.image3d) {
+                transitionTexture(room.image3d);
+            } else {
+                els.viewerLoading.classList.remove('hidden');
+                // Ensure generation is triggered if not already
+                if(room.status !== 'loading') scheduleImageGeneration(index);
+            }
+        }
+
+        function transitionTexture(base64) {
+            new THREE.TextureLoader().load(`data:image/png;base64,${base64}`, (tex) => {
+                tex.colorSpace = THREE.SRGBColorSpace;
+                tex.minFilter = THREE.LinearFilter;
+                tex.generateMipmaps = false; 
+
+                // Fade Out -> Change -> Fade In
+                const mat = sphere.material;
+                new TWEEN.Tween(mat).to({ opacity: 0 }, 200).onComplete(() => {
+                    mat.map = tex;
+                    mat.color.setHex(0xffffff); // Ensure bright white base
+                    mat.transparent = true;
+                    mat.needsUpdate = true;
+                    
+                    els.viewerLoading.classList.add('hidden'); // Hide loader
+                    
+                    new TWEEN.Tween(mat).to({ opacity: 1 }, 500).start();
+                    
+                    // Reset Camera slightly
+                    new TWEEN.Tween(camera).to({ fov: 75 }, 800)
+                        .easing(TWEEN.Easing.Cubic.Out)
+                        .onUpdate(() => camera.updateProjectionMatrix())
+                        .start();
+                }).start();
+            });
+        }
+
+        // --- MAIN LOGIC ---
+        els.generateBtn.addEventListener('click', async () => {
+            const text = els.promptInput.value.trim();
+            if (selectedBase64Images.length === 0) {
+                 showError("Vui lòng tải lên ảnh bản vẽ (Floor Plan) trước!");
+                 return;
+            }
+
+            els.generateBtn.disabled = true;
+            els.sendIcon.classList.add('hidden');
+            els.loadingIndicator.classList.remove('hidden');
+            els.statusText.innerText = 'Đang phân tích cấu trúc...';
+            els.mapLoadingOverlay.classList.remove('hidden');
+
+            try {
+                // 1. Set Map Image
+                els.floorPlanImage.src = `data:image/png;base64,${selectedBase64Images[0]}`;
+
+                // 2. Analyze
+                const rawAnalysis = await analyzeInputs(text, selectedBase64Images);
+                
+                roomDataCache = rawAnalysis.split('|||').map((section, idx) => {
+                    const nameMatch = section.match(/ROOM:\s*(.*?)\s*::/i);
+                    const posMatch = section.match(/POS:\s*\[(\d+),\s*(\d+)\]/i);
+                    const promptMatch = section.match(/PROMPT:\s*(.*)/i);
+                    if (!nameMatch || !promptMatch) return null;
+                    return {
+                        name: nameMatch[1],
+                        x: posMatch ? parseInt(posMatch[1]) : (20 + (idx * 15)) % 80,
+                        y: posMatch ? parseInt(posMatch[2]) : (30 + (idx * 10)) % 80,
+                        prompt: promptMatch[1],
+                        image3d: null,
+                        status: 'pending'
+                    };
+                }).filter(Boolean);
+
+                if (roomDataCache.length === 0) throw new Error("Không tìm thấy thông tin phòng.");
+
+                // 3. Render Map & List
+                renderUI();
+                els.mapLoadingOverlay.classList.add('hidden');
+                els.statusText.innerText = 'Đang render 360°...';
+
+                // 4. AUTO START TOUR: Switch to Room 0 immediately
+                processingQueue.reset(roomDataCache.length);
+                if (roomDataCache.length > 0) {
+                    switchToRoom(0); // This will trigger generation for room 0 and show loader in main view
+                }
+
+                // 5. Queue others in background
+                roomDataCache.forEach((_, idx) => {
+                    if (idx !== 0) scheduleImageGeneration(idx);
+                });
+
+            } catch (e) {
+                console.error(e);
+                showError(e.message);
+            } finally {
+                els.generateBtn.disabled = false;
+                els.sendIcon.classList.remove('hidden');
+                els.loadingIndicator.classList.add('hidden');
+            }
+        });
+
+        // Error Handling
+        function showError(msg) {
+            els.errorMessage.innerText = msg;
+            els.errorBox.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                els.errorBox.classList.add('translate-y-20', 'opacity-0');
+            }, 5000);
+        }
+        window.hideError = () => els.errorBox.classList.add('translate-y-20', 'opacity-0');
+
+    </script>
+</body>
+</html>
+
