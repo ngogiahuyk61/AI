@@ -1,0 +1,73 @@
+{% load static %}
+
+{% block header %}
+{% include 'floorplan_app/dashboard_parts_html/Header/header_dashboard.html' %}
+{% endblock %}
+
+{% block content %}
+<div id="view-dashboard" class="fade-in space-y-8 p-6">
+    <div id="section-user-input" class="dashboard-tab-content">
+        {% include 'floorplan_app/dashboard_parts_html/section_user_input.html' %}
+    </div>
+
+    <div id="section-consistency" class="dashboard-tab-content hidden">
+        {% include 'floorplan_app/dashboard_parts_html/section_consistency.html' %}
+    </div>
+
+    <div id="section-performance" class="dashboard-tab-content hidden">
+        {% include 'floorplan_app/dashboard_parts_html/section_performance.html' %}
+    </div>
+
+    <div id="section-validity" class="dashboard-tab-content hidden">
+        {% include 'floorplan_app/dashboard_parts_html/section_validity.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<script src="{% static 'floorplan_app/js/dashboard_parts_js/user_input.js' %}?v=1.3"></script>
+<script src="{% static 'floorplan_app/js/dashboard_parts_js/consistency.js' %}"></script>
+<script src="{% static 'floorplan_app/js/dashboard_parts_js/performance.js' %}"></script>
+<script src="{% static 'floorplan_app/js/dashboard_parts_js/validity.js' %}"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Đăng ký Plugin Chart
+        if (typeof ChartDataLabels !== 'undefined') {
+            Chart.register(ChartDataLabels);
+        }
+
+        const chartInstances = {};
+        let statsData = {};
+
+        // Lấy dữ liệu Stats
+        try {
+            const dataScript = document.getElementById('stats-data');
+            if (dataScript) {
+                statsData = JSON.parse(dataScript.textContent);
+            }
+        } catch (e) {
+            console.warn("Không có dữ liệu stats, sử dụng mặc định.");
+        }
+
+        // Vẽ biểu đồ Consistency
+        if (typeof renderConsistencyCharts === 'function') {
+            renderConsistencyCharts(statsData, {}, {}, chartInstances);
+        }
+
+        // Vẽ biểu đồ Validity
+        if (typeof renderValidityCharts === 'function') {
+            renderValidityCharts(statsData);
+        }
+
+        // (Nếu có hàm vẽ Performance thì gọi luôn ở đây)
+    });
+</script>
+{% endblock %}
+
+<!-- Thêm footer vào đây -->
+{% include 'floorplan_app/dashboard_parts_html/Footer/footer_dashboard.html' %}

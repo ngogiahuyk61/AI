@@ -1,0 +1,71 @@
+{% load static %}
+<link rel="icon" href="{% static 'floorplan_app/img/icon_TGL.ico' %}" type="image/x-icon">
+<script src="https://cdn.tailwindcss.com"></script>
+<header class="bg-white border-b border-slate-200 px-8 py-4 shadow-sm z-20 flex flex-col gap-3">
+    <div>
+        <h1 id="page-title" class="text-xl font-bold text-slate-900">
+            {% block page_title %}DASHBOARD SURVEY OVERVIEW{% endblock %}
+        </h1>
+    </div>
+    <div id="tabs-container" class="inline-flex bg-white p-1 rounded-lg border border-blue-500 shadow-sm w-fit">
+
+        <button onclick="switchDashboardTab('user-input', this)"
+            class="tab-btn flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all focus:outline-none border bg-blue-50 text-blue-600 border-blue-500 shadow-sm">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="9" y1="21" x2="9" y2="9"></line>
+            </svg>
+            <span>User Input Form</span>
+        </button>
+
+        <button onclick="switchDashboardTab('consistency', this)"
+            class="tab-btn flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all focus:outline-none border border-transparent text-slate-500 hover:text-blue-500 hover:bg-slate-50">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <span>Consistency</span>
+        </button>
+
+        <button onclick="switchDashboardTab('performance', this)"
+            class="tab-btn flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all focus:outline-none border border-transparent text-slate-500 hover:text-blue-500 hover:bg-slate-50">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            <span>Performance</span>
+        </button>
+
+        <button onclick="switchDashboardTab('validity', this)"
+            class="tab-btn flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all focus:outline-none border border-transparent text-slate-500 hover:text-blue-500 hover:bg-slate-50">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+            <span>Qualifying Statistic</span>
+        </button>
+    </div>
+</header>
+
+<script>
+    function switchDashboardTab(tabId, btnElement) {
+        const allContents = document.querySelectorAll('.dashboard-tab-content');
+        allContents.forEach(el => el.classList.add('hidden'));
+        const targetContent = document.getElementById('section-' + tabId);
+        if (targetContent) {
+            targetContent.classList.remove('hidden');
+        }
+        const allBtns = document.querySelectorAll('.tab-btn');
+        allBtns.forEach(btn => {
+            btn.className = 'tab-btn flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all focus:outline-none border border-transparent text-slate-500 hover:text-blue-500 hover:bg-slate-50';
+        });
+        if (btnElement) {
+            btnElement.className = 'tab-btn flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all focus:outline-none border bg-blue-50 text-blue-600 border-blue-500 shadow-sm';
+        }
+    }
+</script>

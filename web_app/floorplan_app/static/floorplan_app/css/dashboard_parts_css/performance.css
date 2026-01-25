@@ -1,0 +1,33 @@
+body {  
+        zoom: 55%;
+    }
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Đảm bảo canvas chart hoạt động tốt trong flex container */
+#performanceChart {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 300px; /* Giới hạn chiều cao biểu đồ */
+}
+
+/* Hiệu ứng active cho dropdown filter */
+.perf-filter-option.active {
+    background-color: #6b7280; /* bg-gray-500 */
+    color: white;
+}
+.perf-filter-option.active:hover {
+    background-color: #4b5563; /* bg-gray-600 */
+}

@@ -1,0 +1,98 @@
+{
+    "request_id": "20251205-115516",
+    "request_status": true,
+    "rooms": {
+        "bedroom_1": 0,
+        "bedroom_2": 0,
+        "bedroom_3": 0,
+        "bedroom_4": 1,
+        "japan": 1,
+        "study": 0,
+        "balcony": 0,
+        "storage": 1,
+        "bathroom": 1,
+        "washroom": 1,
+        "bedroom": 1,
+        "toilet_1": 0,
+        "toilet_2": 1,
+        "toilet_3": 0
+    },
+    "total_area": {
+        "total_area_50": 0,
+        "total_area_100": 1,
+        "total_area_150": 0,
+        "total_area_200": 0
+    },
+    "room_consistency": {
+         "ldk": {
+            "too_small": 0,
+            "good": 1,
+            "too_big": 0
+        },
+        "japan": {
+            "too_small": 0,
+            "good": 0,
+            "too_big": 1
+        },
+        "study": {
+            "too_small": 0,
+            "good": 0,
+            "too_big": 0
+        },
+        "storage": {
+            "too_small": 0,
+            "good": 1,
+            "too_big": 0
+        },
+        "balcony": {
+            "too_small": 0,
+            "good": 0,
+            "too_big": 0
+        },
+        "bathroom": {
+            "too_small": 0,
+            "good": 1,
+            "too_big": 0
+        },
+        "washroom": {
+            "too_small": 0,
+            "good": 1,
+            "too_big": 0
+        },
+        "bedroom": {
+            "too_small": 0,
+            "good": 1,
+            "too_big": 0
+        },
+        "toilet_1": {
+            "too_small": 0,
+            "good": 1,
+            "too_big": 0
+        },
+        "toilet_2": {
+            "too_small": 0,
+            "good": 1,
+            "too_big": 0
+        },
+        "toilet_3": {
+            "too_small": 0,
+            "good": 0,
+            "too_big": 0
+        }
+    },
+    "processing_times": [
+        {
+            "req_id": "010",
+            "total_duration_seconds": 115,
+            "mask_layout": 7,
+            "draw_plan": 58,
+            "generation_1": 16,
+            "generation_2": 32,
+            "generation_3": 0,
+            "generation_4": 0,
+            "generation_5": 0
+        }
+    ],
+    "Consistency": false,
+    "validation": true
+}
