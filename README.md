@@ -2,7 +2,7 @@
 
 ## 🚀 Chạy dự án
 
-### 1. Tải model từ link drive <https://drive.google.com/drive/folders/16Xd96-AVt61Mr4RmksFbPhrayNiplHDy?usp=sharing>, đem vào thư mục ai_processing/model/predict_model.
+### 1. Tải model từ link drive <[https://drive.google.com/drive/folders/16Xd96-AVt61Mr4RmksFbPhrayNiplHDy?usp=sharing](https://drive.google.com/drive/folders/1k_s7ioeVmZ6ObBAe45ljXiIpOhD0HLot?usp=drive_link)>, đem vào thư mục ai_processing/model/predict_model.
  - Foler predict_model phải có đủ model đuôi pt và pkl; folder model phải có file t5_feature.pkl.
 
 ### 2. Cài dependencies cho mỗi model, module trong ai_processing (cd vào folder, chạy lệnh bên dưới cho mỗi folder)
@@ -36,5 +36,6 @@ Mặc định truy cập tại: http://127.0.0.1:8000
 
 Thực hiện tạo hình dạng khu đất yêu cầu với Land setting -> Save.
 Sau đó thực hiện nhập mô tả số phòng của floorplan -> Generate Plans
+
 
 
